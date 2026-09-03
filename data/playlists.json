@@ -1,0 +1,16 @@
+{
+  "playlists": [
+    {
+      "id": "pl_workout",
+      "name": "Workout",
+      "song_ids": [],
+      "pinned": false
+    },
+    {
+      "id": "pl_favorites",
+      "name": "Favorites",
+      "song_ids": [],
+      "pinned": false
+    }
+  ]
+}
