@@ -4,7 +4,7 @@ BGM MASTER V1 - Offline Music Player & Moodify AI Engine.
 Complete offline desktop music player application featuring:
   - Folder & File MP3/Audio Importing with Track Metadata
   - Dynamic Mood Playlists (Romantic, Happy, Sad, Lonely, Chill, Excited + Custom Moods)
-  - Profile Management & Automated Multi-Frame Face Registration with Live Validation
+  - Profile Management & Manual Button-Based Face Registration with 2 Compulsory Captures
   - Real-Time Facial Expression Recognition & Automatic Mood Playlist Auto-Play (Moodify)
 
 Usage:
@@ -351,6 +351,18 @@ class ProfileManager:
         self.save()
         return new_prof
 
+    def delete_profile(self, profile_id_or_name: str) -> bool:
+        """Delete a profile and its stored face data by ID or Name."""
+        initial_count = len(self.profiles)
+        self.profiles = [
+            p for p in self.profiles
+            if p["id"] != profile_id_or_name and p["name"].lower() != profile_id_or_name.lower()
+        ]
+        if len(self.profiles) < initial_count:
+            self.save()
+            return True
+        return False
+
     def update_face_data(self, profile_id: str, feature_vectors: List[np.ndarray]):
         """Update registered feature embeddings for a profile."""
         for prof in self.profiles:
@@ -478,7 +490,7 @@ class MusicLibraryManager:
 
 
 # =============================================================================
-# Assign Mood Combobox Dropdown Dialog
+# Dialogs: Assign Mood & Manage Profiles
 # =============================================================================
 
 class AssignMoodDialog:
@@ -558,208 +570,543 @@ class AssignMoodDialog:
         self.top.destroy()
 
 
+class ManageProfilesModal:
+    """Modal dialog for viewing and deleting user profiles."""
+
+    def __init__(self, parent: tk.Tk, profile_mgr: ProfileManager, on_profile_deleted_callback):
+        self.top = tk.Toplevel(parent)
+        self.top.title("Manage Profiles")
+        self.top.geometry("450x420")
+        self.top.configure(bg=COLOR_BG)
+        self.top.grab_set()
+
+        self.profile_mgr = profile_mgr
+        self.on_profile_deleted_callback = on_profile_deleted_callback
+
+        self._build_ui()
+
+    def _build_ui(self):
+        top_frame = ttk.Frame(self.top, padding=15)
+        top_frame.pack(fill=tk.BOTH, expand=True)
+
+        ttk.Label(top_frame, text="MANAGE PROFILES", style="Header.TLabel").pack(anchor=tk.W, pady=(0, 6))
+        ttk.Label(top_frame, text="View registered profiles or remove profiles:", foreground=COLOR_TEXT_MUTED).pack(anchor=tk.W, pady=(0, 10))
+
+        # List Container
+        self.list_container = ttk.Frame(top_frame, style="Card.TFrame", padding=10)
+        self.list_container.pack(fill=tk.BOTH, expand=True, pady=(0, 15))
+
+        self._refresh_list()
+
+        btn_close = tk.Button(
+            top_frame,
+            text="Close",
+            font=("Segoe UI", 10, "bold"),
+            bg="#4B5563",
+            fg=COLOR_WHITE,
+            relief=tk.FLAT,
+            padx=15,
+            pady=4,
+            command=self.top.destroy
+        )
+        btn_close.pack(side=tk.RIGHT)
+
+    def _refresh_list(self):
+        for widget in self.list_container.winfo_children():
+            widget.destroy()
+
+        if not self.profile_mgr.profiles:
+            ttk.Label(self.list_container, text="No registered profiles found.", foreground=COLOR_TEXT_MUTED).pack(anchor=tk.W)
+            return
+
+        for prof in self.profile_mgr.profiles:
+            row_frame = ttk.Frame(self.list_container, style="Card.TFrame")
+            row_frame.pack(fill=tk.X, pady=3)
+
+            vec_count = len(prof.get("feature_vectors", []))
+            lbl_info = tk.Label(
+                row_frame,
+                text=f"👤 {prof['name']}  ({vec_count} samples)",
+                font=("Segoe UI", 10, "bold"),
+                bg=COLOR_CARD,
+                fg=COLOR_WHITE
+            )
+            lbl_info.pack(side=tk.LEFT, padx=5)
+
+            btn_del = tk.Button(
+                row_frame,
+                text="Delete",
+                font=("Segoe UI", 9, "bold"),
+                bg=COLOR_DANGER,
+                fg=COLOR_WHITE,
+                relief=tk.FLAT,
+                padx=8,
+                pady=2,
+                cursor="hand2",
+                command=lambda p=prof: self._on_delete_profile(p)
+            )
+            btn_del.pack(side=tk.RIGHT, padx=5)
+
+    def _on_delete_profile(self, prof: Dict[str, Any]):
+        if messagebox.askyesno("Confirm Deletion", f"Delete profile '{prof['name']}'?\nThis will remove registered face data (your music files will not be deleted)."):
+            self.profile_mgr.delete_profile(prof["id"])
+            self._refresh_list()
+            if self.on_profile_deleted_callback:
+                self.on_profile_deleted_callback()
+
+
 # =============================================================================
-# Automated Multi-Frame Face Registration Modal Window
+# Manual Button-Based Face Registration Modal Window
 # =============================================================================
 
 class FaceRegistrationModal:
-    """Interactive modal window for automated multi-frame profile face registration."""
+    """
+    Interactive modal window for step-by-step manual button-based profile face registration.
+    Step 1: Enter Name -> Click Start Registration (Camera OFF until clicked).
+    Step 2: Camera ON -> Select Expression -> 2 Compulsory Captures + Optional Extra Captures.
+    Step 3: Registration Summary & Save Profile.
+    """
 
-    SAMPLES_PER_STEP = 10
-
-    PROMPT_STEPS = [
-        ("Step 1 of 4: NEUTRAL", "Look directly at the camera with a relaxed neutral expression"),
-        ("Step 2 of 4: HAPPY", "Smile naturally into the camera"),
-        ("Step 3 of 4: SAD", "Show a gentle sad expression"),
-        ("Step 4 of 4: SURPRISED / EXCITED", "Show a surprised or excited expression"),
+    DEFAULT_EXPRESSIONS = [
+        ("Neutral", "Show a relaxed neutral expression"),
+        ("Happy", "Show a clear happy expression / smile"),
+        ("Sad", "Show a sad expression"),
+        ("Surprised/Excited", "Show a surprised or excited expression"),
     ]
+
+    REQUIRED_CAPTURES_PER_EXP = 2
 
     def __init__(self, parent: tk.Tk, profile_mgr: ProfileManager, on_complete_callback):
         self.top = tk.Toplevel(parent)
-        self.top.title("Add New Profile - Face Registration")
-        self.top.geometry("660x600")
+        self.top.title("Create New Profile - Face Registration")
+        self.top.geometry("700x660")
         self.top.configure(bg=COLOR_BG)
         self.top.grab_set()
 
         self.profile_mgr = profile_mgr
         self.on_complete_callback = on_complete_callback
 
-        self.current_step = 0
-        self.step_samples: List[np.ndarray] = []
-        self.recorded_vectors: List[np.ndarray] = []
+        # State
+        self.stage = 1  # 1 = Name entry, 2 = Camera Registration, 3 = Completion
         self.profile_name = ""
+        self.expressions: List[Tuple[str, str]] = list(self.DEFAULT_EXPRESSIONS)
+        self.current_exp_idx = 0
+        self.captured_vectors_by_exp: Dict[str, List[np.ndarray]] = {exp[0]: [] for exp in self.expressions}
 
-        self._build_ui()
-
+        # Camera & Detector
         self.detector: Optional[FaceDetector] = None
         self.cap: Optional[cv2.VideoCapture] = None
-        self.is_running = True
-        self.is_capturing = True
+        self.is_camera_running = False
+        self.last_valid_landmarks = None
+        self.last_valid_blendshapes = None
 
+        self._build_ui_stage1_name()
         self.top.protocol("WM_DELETE_WINDOW", self._on_close)
-        self.top.after(100, self._start_registration)
 
-    def _build_ui(self):
-        top_frame = ttk.Frame(self.top, padding=12)
+    # -------------------------------------------------------------------------
+    # STAGE 1: Profile Name Entry Screen
+    # -------------------------------------------------------------------------
+
+    def _build_ui_stage1_name(self):
+        for widget in self.top.winfo_children():
+            widget.destroy()
+
+        container = ttk.Frame(self.top, padding=30)
+        container.pack(fill=tk.BOTH, expand=True)
+
+        ttk.Label(container, text="CREATE NEW PROFILE", style="Header.TLabel").pack(anchor=tk.W, pady=(0, 10))
+        ttk.Label(
+            container,
+            text="Step 1: Enter profile name before starting camera registration",
+            foreground=COLOR_TEXT_MUTED
+        ).pack(anchor=tk.W, pady=(0, 20))
+
+        card = ttk.Frame(container, style="Card.TFrame", padding=20)
+        card.pack(fill=tk.X, pady=(0, 20))
+
+        ttk.Label(card, text="Profile Name:", style="SubHeader.TLabel").pack(anchor=tk.W, pady=(0, 8))
+
+        self.entry_name = tk.Entry(
+            card,
+            font=("Segoe UI", 12),
+            bg="#1E1E22",
+            fg=COLOR_WHITE,
+            insertbackground=COLOR_WHITE,
+            bd=1,
+            relief=tk.SOLID
+        )
+        self.entry_name.pack(fill=tk.X, pady=(0, 15))
+        self.entry_name.insert(0, f"User {len(self.profile_mgr.profiles) + 1}")
+        self.entry_name.focus_set()
+
+        btn_start = tk.Button(
+            card,
+            text="Start Camera Registration ➔",
+            font=("Segoe UI", 11, "bold"),
+            bg=COLOR_PRIMARY,
+            fg=COLOR_WHITE,
+            relief=tk.RAISED,
+            bd=2,
+            pady=8,
+            cursor="hand2",
+            command=self._on_start_registration_click
+        )
+        btn_start.pack(fill=tk.X)
+
+    def _on_start_registration_click(self):
+        name = self.entry_name.get().strip()
+        if not name:
+            messagebox.showwarning("Missing Name", "Please enter a profile name first.")
+            return
+
+        self.profile_name = name
+        self.stage = 2
+        self._build_ui_stage2_registration()
+        self._start_camera_hardware()
+
+    # -------------------------------------------------------------------------
+    # STAGE 2: Camera Registration Screen (Manual Button Capture)
+    # -------------------------------------------------------------------------
+
+    def _build_ui_stage2_registration(self):
+        for widget in self.top.winfo_children():
+            widget.destroy()
+
+        top_frame = ttk.Frame(self.top, padding=(15, 10))
         top_frame.pack(fill=tk.X)
 
-        ttk.Label(top_frame, text="CREATE NEW PROFILE", style="Header.TLabel").pack(anchor=tk.W)
+        ttk.Label(top_frame, text=f"FACE REGISTRATION — {self.profile_name.upper()}", style="Header.TLabel").pack(side=tk.LEFT)
 
-        name_frame = ttk.Frame(top_frame)
-        name_frame.pack(fill=tk.X, pady=(6, 0))
+        # Main 2-column layout (Left: Camera, Right: Controls & Progress)
+        body = ttk.Frame(self.top, padding=(15, 0, 15, 10))
+        body.pack(fill=tk.BOTH, expand=True)
 
-        ttk.Label(name_frame, text="Profile Name:").pack(side=tk.LEFT, padx=(0, 6))
-        self.entry_name = tk.Entry(
-            name_frame,
-            font=("Segoe UI", 10),
-            bg=COLOR_CARD,
-            fg=COLOR_WHITE,
-            insertbackground=COLOR_WHITE
-        )
-        self.entry_name.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        self.entry_name.insert(0, f"User {len(self.profile_mgr.profiles) + 1}")
+        # --- Left Column: Camera Preview ---
+        left_col = ttk.Frame(body)
+        left_col.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
 
-        cam_card = ttk.Frame(self.top, style="Card.TFrame", padding=6)
-        cam_card.pack(fill=tk.BOTH, expand=True, padx=12, pady=6)
+        cam_card = ttk.Frame(left_col, style="Card.TFrame", padding=4)
+        cam_card.pack(fill=tk.BOTH, expand=True)
 
-        self.cam_label = tk.Label(cam_card, bg="#000000", text="Starting camera...")
+        self.cam_label = tk.Label(cam_card, bg="#000000", text="Initializing camera...")
         self.cam_label.pack(fill=tk.BOTH, expand=True)
 
-        prompt_card = ttk.Frame(self.top, style="Card.TFrame", padding=10)
-        prompt_card.pack(fill=tk.X, padx=12, pady=(0, 6))
-
-        title_row = ttk.Frame(prompt_card, style="Card.TFrame")
-        title_row.pack(fill=tk.X)
-
-        self.lbl_step_title = tk.Label(
-            title_row,
-            text=self.PROMPT_STEPS[0][0],
-            font=("Segoe UI", 11, "bold"),
-            bg=COLOR_CARD,
-            fg=COLOR_PRIMARY
-        )
-        self.lbl_step_title.pack(side=tk.LEFT)
-
-        self.lbl_sample_badge = tk.Label(
-            title_row,
-            text="[ ● CAPTURING 0/10 ]",
+        # Face Status Overlay
+        self.lbl_face_status = tk.Label(
+            left_col,
+            text="Face Status: Detecting...",
             font=("Segoe UI", 10, "bold"),
+            bg=COLOR_BG,
+            fg=COLOR_WARNING,
+            anchor=tk.W,
+            pady=4
+        )
+        self.lbl_face_status.pack(fill=tk.X)
+
+        # --- Right Column: Manual Expression Controls & Progress ---
+        right_col = ttk.Frame(body, width=310)
+        right_col.pack(side=tk.RIGHT, fill=tk.Y)
+        right_col.pack_propagate(False)
+
+        # Expression Control Card
+        exp_card = ttk.Frame(right_col, style="Card.TFrame", padding=12)
+        exp_card.pack(fill=tk.X, pady=(0, 10))
+
+        ttk.Label(exp_card, text="SELECT EXPRESSION", style="SubHeader.TLabel").pack(anchor=tk.W, pady=(0, 4))
+
+        exp_names = [e[0] for e in self.expressions] + ["+ Add Expression"]
+        curr_exp_name = self.expressions[self.current_exp_idx][0]
+
+        self.combo_exp_var = tk.StringVar(value=curr_exp_name)
+        self.combo_exp = ttk.Combobox(
+            exp_card,
+            textvariable=self.combo_exp_var,
+            values=exp_names,
+            state="readonly",
+            font=("Segoe UI", 10, "bold")
+        )
+        self.combo_exp.pack(fill=tk.X, pady=(0, 8))
+        self.combo_exp.bind("<<ComboboxSelected>>", self._on_expression_dropdown_selected)
+
+        self.lbl_exp_instruct = tk.Label(
+            exp_card,
+            text=self.expressions[self.current_exp_idx][1],
+            font=("Segoe UI", 9),
+            bg=COLOR_CARD,
+            fg=COLOR_TEXT_MUTED,
+            wraplength=280,
+            justify=tk.LEFT
+        )
+        self.lbl_exp_instruct.pack(anchor=tk.W, pady=(0, 10))
+
+        # Counter Badge
+        self.lbl_capture_count = tk.Label(
+            exp_card,
+            text="0 / 2 required captures",
+            font=("Segoe UI", 11, "bold"),
             bg=COLOR_CARD,
             fg=COLOR_WARNING
         )
-        self.lbl_sample_badge.pack(side=tk.RIGHT)
+        self.lbl_capture_count.pack(anchor=tk.W, pady=(0, 10))
 
-        self.lbl_step_desc = tk.Label(
-            prompt_card,
-            text=self.PROMPT_STEPS[0][1],
-            font=("Segoe UI", 10),
-            bg=COLOR_CARD,
-            fg=COLOR_TEXT
+        # Action Buttons
+        btn_grid = ttk.Frame(exp_card, style="Card.TFrame")
+        btn_grid.pack(fill=tk.X)
+
+        self.btn_capture = tk.Button(
+            btn_grid,
+            text="📷 CAPTURE",
+            font=("Segoe UI", 11, "bold"),
+            bg=COLOR_PRIMARY,
+            fg=COLOR_WHITE,
+            relief=tk.RAISED,
+            bd=2,
+            pady=6,
+            cursor="hand2",
+            command=self._on_click_capture
         )
-        self.lbl_step_desc.pack(anchor=tk.W, pady=(2, 4))
+        self.btn_capture.pack(fill=tk.X, pady=(0, 4))
 
-        self.lbl_val_status = tk.Label(
-            prompt_card,
-            text="Face Status: Detecting...",
+        action_row = ttk.Frame(btn_grid, style="Card.TFrame")
+        action_row.pack(fill=tk.X)
+
+        self.btn_skip = tk.Button(
+            action_row,
+            text="SKIP",
             font=("Segoe UI", 9, "bold"),
-            bg=COLOR_CARD,
-            fg=COLOR_PRIMARY
-        )
-        self.lbl_val_status.pack(anchor=tk.W)
-
-        btn_bar = ttk.Frame(self.top, padding=12)
-        btn_bar.pack(fill=tk.X)
-
-        btn_cancel = tk.Button(
-            btn_bar,
-            text="Cancel",
-            font=("Segoe UI", 10),
             bg="#4B5563",
             fg=COLOR_WHITE,
             relief=tk.FLAT,
-            command=self._on_close
+            state=tk.DISABLED,
+            command=self._on_click_skip
         )
-        btn_cancel.pack(side=tk.LEFT)
+        self.btn_skip.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 2))
 
-    def _start_registration(self):
+        self.btn_next = tk.Button(
+            action_row,
+            text="NEXT ➔",
+            font=("Segoe UI", 9, "bold"),
+            bg=COLOR_ACCENT,
+            fg=COLOR_WHITE,
+            relief=tk.FLAT,
+            state=tk.DISABLED,
+            command=self._on_click_next_expression
+        )
+        self.btn_next.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(2, 0))
+
+        # Progress Checklist Card
+        prog_card = ttk.Frame(right_col, style="Card.TFrame", padding=12)
+        prog_card.pack(fill=tk.BOTH, expand=True)
+
+        ttk.Label(prog_card, text="REGISTRATION PROGRESS", style="SubHeader.TLabel").pack(anchor=tk.W, pady=(0, 6))
+
+        self.prog_list_frame = ttk.Frame(prog_card, style="Card.TFrame")
+        self.prog_list_frame.pack(fill=tk.BOTH, expand=True)
+
+        self._refresh_progress_checklist()
+
+        # Update controls state
+        self._update_capture_status_ui()
+
+    def _refresh_progress_checklist(self):
+        for w in self.prog_list_frame.winfo_children():
+            w.destroy()
+
+        for exp_name, _ in self.expressions:
+            vecs = self.captured_vectors_by_exp.get(exp_name, [])
+            cnt = len(vecs)
+            status_icon = "✓" if cnt >= self.REQUIRED_CAPTURES_PER_EXP else "○"
+            col = COLOR_ACCENT if cnt >= self.REQUIRED_CAPTURES_PER_EXP else COLOR_TEXT_MUTED
+
+            row = ttk.Frame(self.prog_list_frame, style="Card.TFrame")
+            row.pack(fill=tk.X, pady=2)
+
+            tk.Label(row, text=f"{status_icon} {exp_name}", font=("Segoe UI", 9, "bold"), bg=COLOR_CARD, fg=col).pack(side=tk.LEFT)
+            tk.Label(row, text=f"{cnt} captures", font=("Segoe UI", 9), bg=COLOR_CARD, fg=COLOR_TEXT_MUTED).pack(side=tk.RIGHT)
+
+    def _update_capture_status_ui(self):
+        curr_exp = self.expressions[self.current_exp_idx][0]
+        cnt = len(self.captured_vectors_by_exp.get(curr_exp, []))
+
+        if cnt < self.REQUIRED_CAPTURES_PER_EXP:
+            self.lbl_capture_count.config(text=f"{cnt} / {self.REQUIRED_CAPTURES_PER_EXP} required captures", fg=COLOR_WARNING)
+            self.btn_skip.config(state=tk.DISABLED, bg="#4B5563")
+            self.btn_next.config(state=tk.DISABLED, bg="#4B5563")
+            self.btn_capture.config(text="📷 CAPTURE", bg=COLOR_PRIMARY)
+        else:
+            self.lbl_capture_count.config(text=f"✓ {cnt} captures completed", fg=COLOR_ACCENT)
+            self.btn_skip.config(state=tk.NORMAL, bg="#4B5563")
+            self.btn_next.config(state=tk.NORMAL, bg=COLOR_ACCENT)
+            self.btn_capture.config(text="📷 CAPTURE MORE", bg="#0284C7")
+
+        # Check if all required expressions completed
+        all_done = all(
+            len(self.captured_vectors_by_exp.get(e[0], [])) >= self.REQUIRED_CAPTURES_PER_EXP
+            for e in self.expressions[:4]
+        )
+        if all_done:
+            self._build_ui_stage3_complete()
+
+    def _on_expression_dropdown_selected(self, event=None):
+        sel = self.combo_exp_var.get()
+        if sel == "+ Add Expression":
+            new_exp = simpledialog.askstring("Add Expression", "Enter custom expression name:")
+            if new_exp and new_exp.strip():
+                clean_e = new_exp.strip().capitalize()
+                self.expressions.append((clean_e, f"Show a {clean_e.lower()} expression"))
+                if clean_e not in self.captured_vectors_by_exp:
+                    self.captured_vectors_by_exp[clean_e] = []
+                self.current_exp_idx = len(self.expressions) - 1
+                self._update_expression_view()
+        else:
+            for idx, (exp_name, _) in enumerate(self.expressions):
+                if exp_name == sel:
+                    self.current_exp_idx = idx
+                    self._update_expression_view()
+                    break
+
+    def _update_expression_view(self):
+        exp_name, exp_desc = self.expressions[self.current_exp_idx]
+        self.combo_exp_var.set(exp_name)
+        self.lbl_exp_instruct.config(text=exp_desc)
+        self._update_capture_status_ui()
+        self._refresh_progress_checklist()
+
+    def _start_camera_hardware(self):
         try:
             self.detector = FaceDetector()
             self.cap = cv2.VideoCapture(0)
+            self.is_camera_running = True
+            self._update_cam_loop()
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to initialize camera or detector:\n{e}")
-            self._on_close()
-            return
-
-        self._update_cam_loop()
+            messagebox.showerror("Camera Error", f"Failed to initialize camera:\n{e}")
 
     def _update_cam_loop(self):
-        if not self.is_running or self.cap is None or not self.cap.isOpened():
+        if not self.is_camera_running or self.cap is None or not self.cap.isOpened():
             return
 
         ret, frame = self.cap.read()
         if ret and frame is not None:
             frame = cv2.flip(frame, 1)
 
-            face_detected = False
             if self.detector is not None:
                 landmarks, blendshapes = self.detector.detect(frame)
-                face_detected = landmarks is not None
-
-                if face_detected:
+                if landmarks is not None:
+                    self.last_valid_landmarks = landmarks
+                    self.last_valid_blendshapes = blendshapes
                     frame = self.detector.draw_landmarks(frame, landmarks)
-                    self.lbl_val_status.config(text="Face status: Face detected - Hold still", fg=COLOR_ACCENT)
-
-                    # Auto Multi-Frame Capture
-                    if self.is_capturing and self.current_step < len(self.PROMPT_STEPS):
-                        vec, _ = extract_facial_features(landmarks, blendshapes)
-                        if np.any(vec != 0):
-                            self.step_samples.append(vec)
-                            cnt = len(self.step_samples)
-                            self.lbl_sample_badge.config(text=f"[ ● CAPTURING {cnt}/{self.SAMPLES_PER_STEP} ]", fg=COLOR_WARNING)
-
-                            if cnt >= self.SAMPLES_PER_STEP:
-                                # Step Completed
-                                self.recorded_vectors.extend(self.step_samples)
-                                self.step_samples.clear()
-                                self.current_step += 1
-
-                                if self.current_step < len(self.PROMPT_STEPS):
-                                    step_t, step_d = self.PROMPT_STEPS[self.current_step]
-                                    self.lbl_step_title.config(text=step_t)
-                                    self.lbl_step_desc.config(text=step_d)
-                                    self.lbl_sample_badge.config(text=f"[ ● CAPTURING 0/{self.SAMPLES_PER_STEP} ]", fg=COLOR_WARNING)
-                                else:
-                                    # Complete All Registration Steps!
-                                    self.is_capturing = False
-                                    self._finalize_registration()
-                                    return
+                    self.lbl_face_status.config(text="Face status: Face detected ✓", fg=COLOR_ACCENT)
                 else:
-                    self.lbl_val_status.config(text="Face status: No face detected", fg=COLOR_DANGER)
+                    self.last_valid_landmarks = None
+                    self.last_valid_blendshapes = None
+                    self.lbl_face_status.config(text="Face status: No face detected — position face in camera", fg=COLOR_DANGER)
 
-            # Render frame
             h, w, _ = frame.shape
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            pil_img = Image.fromarray(rgb_frame).resize((600, 360), Image.Resampling.BILINEAR)
+            pil_img = Image.fromarray(rgb_frame).resize((420, 310), Image.Resampling.BILINEAR)
             img_tk = ImageTk.PhotoImage(image=pil_img)
             self.cam_label.img_tk = img_tk
             self.cam_label.config(image=img_tk, text="")
 
         self.top.after(30, self._update_cam_loop)
 
-    def _finalize_registration(self):
-        name = self.entry_name.get().strip()
-        if not name:
-            name = f"User {len(self.profile_mgr.profiles) + 1}"
+    def _on_click_capture(self):
+        if self.last_valid_landmarks is None:
+            messagebox.showwarning("No Face Detected", "Cannot capture: No valid face detected in camera view.")
+            return
 
-        new_prof = self.profile_mgr.add_profile(name, self.recorded_vectors)
-        messagebox.showinfo("Registration Complete", f"✓ Face profile for '{name}' successfully registered!")
+        vec, _ = extract_facial_features(self.last_valid_landmarks, self.last_valid_blendshapes)
+        if np.any(vec != 0):
+            curr_exp = self.expressions[self.current_exp_idx][0]
+            if curr_exp not in self.captured_vectors_by_exp:
+                self.captured_vectors_by_exp[curr_exp] = []
+
+            self.captured_vectors_by_exp[curr_exp].append(vec)
+            cnt = len(self.captured_vectors_by_exp[curr_exp])
+
+            self.lbl_face_status.config(text=f"✓ Capture {cnt} saved successfully!", fg=COLOR_ACCENT)
+            self._update_capture_status_ui()
+            self._refresh_progress_checklist()
+
+    def _on_click_skip(self):
+        if self.current_exp_idx < len(self.expressions) - 1:
+            self.current_exp_idx += 1
+            self._update_expression_view()
+
+    def _on_click_next_expression(self):
+        curr_exp = self.expressions[self.current_exp_idx][0]
+        cnt = len(self.captured_vectors_by_exp.get(curr_exp, []))
+        if cnt < self.REQUIRED_CAPTURES_PER_EXP:
+            messagebox.showwarning("Incomplete", f"Please complete at least {self.REQUIRED_CAPTURES_PER_EXP} captures for '{curr_exp}' first.")
+            return
+
+        if self.current_exp_idx < len(self.expressions) - 1:
+            self.current_exp_idx += 1
+            self._update_expression_view()
+        else:
+            self._build_ui_stage3_complete()
+
+    # -------------------------------------------------------------------------
+    # STAGE 3: Registration Complete & Save Profile
+    # -------------------------------------------------------------------------
+
+    def _build_ui_stage3_complete(self):
+        self.is_camera_running = False
+        if self.cap is not None:
+            self.cap.release()
+            self.cap = None
+
+        for widget in self.top.winfo_children():
+            widget.destroy()
+
+        container = ttk.Frame(self.top, padding=30)
+        container.pack(fill=tk.BOTH, expand=True)
+
+        ttk.Label(container, text="REGISTRATION COMPLETE ✓", style="Header.TLabel", foreground=COLOR_ACCENT).pack(anchor=tk.W, pady=(0, 6))
+        ttk.Label(container, text=f"Profile: {self.profile_name}", font=("Segoe UI", 12, "bold"), foreground=COLOR_WHITE).pack(anchor=tk.W, pady=(0, 15))
+
+        card = ttk.Frame(container, style="Card.TFrame", padding=20)
+        card.pack(fill=tk.BOTH, expand=True, pady=(0, 20))
+
+        ttk.Label(card, text="RECORDED EXPRESSIONS SUMMARY:", style="SubHeader.TLabel").pack(anchor=tk.W, pady=(0, 10))
+
+        all_vectors = []
+        for exp_name, vecs in self.captured_vectors_by_exp.items():
+            if vecs:
+                all_vectors.extend(vecs)
+                row = ttk.Frame(card, style="Card.TFrame")
+                row.pack(fill=tk.X, pady=3)
+                tk.Label(row, text=f"✓ {exp_name}", font=("Segoe UI", 11, "bold"), bg=COLOR_CARD, fg=COLOR_ACCENT).pack(side=tk.LEFT)
+                tk.Label(row, text=f"{len(vecs)} valid captures saved", font=("Segoe UI", 10), bg=COLOR_CARD, fg=COLOR_TEXT_MUTED).pack(side=tk.RIGHT)
+
+        btn_save = tk.Button(
+            container,
+            text="💾 SAVE PROFILE",
+            font=("Segoe UI", 12, "bold"),
+            bg=COLOR_ACCENT,
+            fg=COLOR_WHITE,
+            relief=tk.RAISED,
+            bd=2,
+            pady=10,
+            cursor="hand2",
+            command=lambda: self._on_save_final_profile(all_vectors)
+        )
+        btn_save.pack(fill=tk.X)
+
+    def _on_save_final_profile(self, all_vectors: List[np.ndarray]):
+        if not all_vectors:
+            messagebox.showerror("No Data", "No facial data was captured.")
+            return
+
+        new_prof = self.profile_mgr.add_profile(self.profile_name, all_vectors)
+        messagebox.showinfo("Saved", f"Profile '{self.profile_name}' created and activated!")
         self._on_close()
 
         if self.on_complete_callback:
             self.on_complete_callback(new_prof)
 
     def _on_close(self):
-        self.is_running = False
+        self.is_camera_running = False
         if self.cap is not None:
             self.cap.release()
             self.cap = None
@@ -810,10 +1157,7 @@ class BGMMasterApp:
         self._init_styles()
         self._build_ui()
 
-        # Set initial active profile
-        if self.profile_mgr.profiles:
-            self.current_profile = self.profile_mgr.profiles[0]
-            self._refresh_profile_dropdown()
+        self._refresh_profile_dropdown()
 
         self._refresh_library_table()
 
@@ -852,7 +1196,6 @@ class BGMMasterApp:
         style.map("Treeview", background=[("selected", "#0284C7")], foreground=[("selected", COLOR_WHITE)])
 
     def _build_ui(self):
-        # Top Header Bar
         top_bar = ttk.Frame(self.root, padding=(15, 10))
         top_bar.pack(fill=tk.X)
 
@@ -862,7 +1205,6 @@ class BGMMasterApp:
         lbl_subtitle = ttk.Label(top_bar, text="Offline Music Player & Moodify AI Engine", foreground=COLOR_TEXT_MUTED)
         lbl_subtitle.pack(side=tk.LEFT, padx=(15, 0), pady=(2, 0))
 
-        # Main Container
         main_layout = ttk.Frame(self.root)
         main_layout.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
 
@@ -873,7 +1215,6 @@ class BGMMasterApp:
         left_sidebar.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 8))
         left_sidebar.pack_propagate(False)
 
-        # Profile Selector Box
         prof_box = ttk.Frame(left_sidebar, style="Card.TFrame", padding=10)
         prof_box.pack(fill=tk.X, pady=(0, 10))
 
@@ -889,7 +1230,6 @@ class BGMMasterApp:
         self.combo_profile.pack(fill=tk.X, pady=(4, 4))
         self.combo_profile.bind("<<ComboboxSelected>>", self._on_profile_dropdown_change)
 
-        # MUSIC Options Box
         music_opt_box = ttk.Frame(left_sidebar, style="Card.TFrame", padding=10)
         music_opt_box.pack(fill=tk.X, pady=(0, 10))
 
@@ -934,7 +1274,6 @@ class BGMMasterApp:
         )
         btn_add_folder.pack(fill=tk.X, pady=2)
 
-        # MOODS Playlists Box
         moods_box = ttk.Frame(left_sidebar, style="Card.TFrame", padding=10)
         moods_box.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
 
@@ -957,7 +1296,6 @@ class BGMMasterApp:
         )
         btn_add_mood.pack(fill=tk.X, side=tk.BOTTOM, pady=(6, 0))
 
-        # Compact Modern Moodify Toggle Box
         moodify_box = ttk.Frame(left_sidebar, style="Card.TFrame", padding=10)
         moodify_box.pack(fill=tk.X, side=tk.BOTTOM)
 
@@ -1234,19 +1572,25 @@ class BGMMasterApp:
             btn.pack(fill=tk.X, pady=2)
 
     def _refresh_profile_dropdown(self):
-        names = [p["name"] for p in self.profile_mgr.profiles] + ["+ Add New Profile"]
+        names = [p["name"] for p in self.profile_mgr.profiles] + ["+ Add New Profile", "Manage Profiles"]
         self.combo_profile["values"] = names
 
-        if self.current_profile:
+        if self.current_profile and self.current_profile["name"] in names:
             self.prof_var.set(self.current_profile["name"])
-        elif names and names[0] != "+ Add New Profile":
+        elif names and names[0] not in ("+ Add New Profile", "Manage Profiles"):
             self.prof_var.set(names[0])
             self.current_profile = self.profile_mgr.profiles[0]
+        else:
+            self.prof_var.set("No profile selected")
+            self.current_profile = None
 
     def _on_profile_dropdown_change(self, event=None):
         sel_name = self.prof_var.get()
         if sel_name == "+ Add New Profile":
             self._on_click_add_profile()
+            return
+        elif sel_name == "Manage Profiles":
+            ManageProfilesModal(self.root, self.profile_mgr, self._refresh_profile_dropdown)
             return
 
         for p in self.profile_mgr.profiles:

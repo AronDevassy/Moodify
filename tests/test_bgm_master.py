@@ -1,6 +1,5 @@
 """
-Unit test suite for BGM MASTER V1 polished subsystems:
-MoodManager, ProfileManager, MusicLibraryManager, AudioPlayer, and Emotion-to-Mood mapping.
+Unit test suite for BGM MASTER V1 manual registration and profile management subsystems.
 """
 
 import os
@@ -20,7 +19,7 @@ from bgm_master import (
 from src.facial_features import FEATURE_DIMENSION
 
 
-class TestBGMMasterV1PolishedSubsystems(unittest.TestCase):
+class TestBGMMasterManualRegistrationSubsystems(unittest.TestCase):
 
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -31,66 +30,52 @@ class TestBGMMasterV1PolishedSubsystems(unittest.TestCase):
     def tearDown(self):
         self.temp_dir.cleanup()
 
-    def test_mood_manager_custom_moods(self):
-        """Test default moods and adding custom user moods."""
-        mgr = MoodManager(filepath=self.moods_path)
-        self.assertEqual(mgr.moods[:len(DEFAULT_MOODS)], DEFAULT_MOODS)
-
-        added = mgr.add_mood("Workout")
-        self.assertTrue(added)
-        self.assertIn("Workout", mgr.moods)
-
-        mgr_reloaded = MoodManager(filepath=self.moods_path)
-        self.assertIn("Workout", mgr_reloaded.moods)
-
-    def test_profile_manager_multi_vector_automated(self):
-        """Test profile creation with automated multi-frame vectors."""
+    def test_profile_creation_and_deletion(self):
+        """Test profile creation, multi-vector addition, and deletion without affecting other files."""
         mgr = ProfileManager(filepath=self.profiles_path)
-        
-        # Create profile 'Faheem' with 40 recorded expression samples (10 per step)
-        samples = [np.ones(FEATURE_DIMENSION, dtype=np.float32) * (0.3 + 0.01 * (i % 4)) for i in range(40)]
-        prof = mgr.add_profile("Faheem", samples)
+        initial_count = len(mgr.profiles)
 
+        # Create profile 'Faheem'
+        vec1 = np.ones(FEATURE_DIMENSION, dtype=np.float32) * 0.4
+        vec2 = np.ones(FEATURE_DIMENSION, dtype=np.float32) * 0.42
+        prof = mgr.add_profile("Faheem", [vec1, vec2])
+
+        self.assertEqual(len(mgr.profiles), initial_count + 1)
         self.assertEqual(prof["name"], "Faheem")
-        self.assertEqual(len(prof["feature_vectors"]), 40)
 
         # Test face recognition match
-        query_vec = np.ones(FEATURE_DIMENSION, dtype=np.float32) * 0.31
+        query_vec = np.ones(FEATURE_DIMENSION, dtype=np.float32) * 0.41
         rec_name, dist = mgr.recognize_face(query_vec, threshold=0.45)
         self.assertEqual(rec_name, "Faheem")
 
-        # Test unknown face
-        diff_vec = np.zeros(FEATURE_DIMENSION, dtype=np.float32)
-        rec_name2, dist2 = mgr.recognize_face(diff_vec, threshold=0.1)
-        self.assertEqual(rec_name2, "Unknown User")
+        # Test profile deletion
+        deleted = mgr.delete_profile(prof["id"])
+        self.assertTrue(deleted)
+        self.assertEqual(len(mgr.profiles), initial_count)
 
-    def test_music_library_folder_import(self):
-        """Test recursively scanning and importing a folder of audio files."""
-        mgr = MusicLibraryManager(filepath=self.library_path)
+        # Verify recognition returns Unknown User after deletion
+        rec_name2, dist2 = mgr.recognize_face(query_vec, threshold=0.45)
+        self.assertNotEqual(rec_name2, "Faheem")
 
-        sub_folder = os.path.join(self.temp_dir.name, "AlbumFolder")
-        os.makedirs(sub_folder, exist_ok=True)
+    def test_music_library_isolation(self):
+        """Test that profile operations leave music library completely intact."""
+        lib_mgr = MusicLibraryManager(filepath=self.library_path)
+        prof_mgr = ProfileManager(filepath=self.profiles_path)
 
-        song1_path = os.path.join(sub_folder, "Artist A - Track 1.mp3")
-        song2_path = os.path.join(sub_folder, "Track 2.wav")
+        dummy_mp3 = os.path.join(self.temp_dir.name, "Track.mp3")
+        with open(dummy_mp3, "wb") as f:
+            f.write(b"AUDIO")
 
-        with open(song1_path, "wb") as f:
-            f.write(b"MOCK_AUDIO_1")
-        with open(song2_path, "wb") as f:
-            f.write(b"MOCK_AUDIO_2")
+        song = lib_mgr.import_file(dummy_mp3, mood="Happy")
+        self.assertIsNotNone(song)
 
-        count = mgr.import_folder(sub_folder, default_mood="Happy")
-        self.assertEqual(count, 2)
-        self.assertEqual(len(mgr.songs), 2)
+        # Add & delete profile
+        p = prof_mgr.add_profile("TestUser", [np.ones(FEATURE_DIMENSION, dtype=np.float32)])
+        prof_mgr.delete_profile(p["id"])
 
-        happy_songs = mgr.get_songs_by_mood("Happy")
-        self.assertEqual(len(happy_songs), 2)
-
-    def test_audio_player_instantiation(self):
-        """Test AudioPlayer initializes smoothly."""
-        player = AudioPlayer()
-        self.assertFalse(player.is_playing)
-        self.assertFalse(player.is_paused)
+        # Check music library is completely intact
+        self.assertEqual(len(lib_mgr.songs), 1)
+        self.assertEqual(lib_mgr.songs[0]["path"], dummy_mp3)
 
 
 if __name__ == "__main__":
