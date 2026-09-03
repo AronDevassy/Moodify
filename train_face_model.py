@@ -14,6 +14,10 @@ Usage:
 import os
 import sys
 import argparse
+import warnings
+
+# Suppress harmless sklearn joblib nested worker configuration warning
+warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
 
 from src.preprocessing import DEFAULT_DATASET_PATH, generate_synthetic_dataset
 from src.train_model import train_and_compare_models, DEFAULT_MODEL_SAVE_PATH

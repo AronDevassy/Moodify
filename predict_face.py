@@ -14,9 +14,14 @@ import os
 import sys
 import time
 import argparse
+import warnings
 from typing import Optional
 import cv2
 import numpy as np
+
+# Suppress protobuf symbol_database deprecation warning emitted by MediaPipe internals
+warnings.filterwarnings("ignore", category=UserWarning, module="google.protobuf.symbol_database")
+warnings.filterwarnings("ignore", message=".*SymbolDatabase.GetPrototype.*")
 
 from src.face_detector import FaceDetector
 from src.predict_model import (

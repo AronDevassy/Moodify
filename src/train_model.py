@@ -8,6 +8,7 @@ Saves the top-performing model and preprocessing scaler to models/face_mood_mode
 """
 
 import os
+import warnings
 from typing import Dict, Any, Tuple
 import joblib
 import numpy as np
@@ -15,6 +16,9 @@ import pandas as pd
 from sklearn.model_selection import train_test_split, StratifiedKFold, cross_validate
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
+
+# Suppress harmless sklearn joblib nested worker configuration warning
+warnings.filterwarnings("ignore", category=UserWarning, module="sklearn.utils.parallel")
 from sklearn.svm import SVC
 from sklearn.metrics import (
     classification_report,

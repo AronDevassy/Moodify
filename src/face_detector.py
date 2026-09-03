@@ -7,9 +7,14 @@ blendshape scores.
 """
 
 import os
+import warnings
 from typing import Optional, Tuple, List, Dict, Any
 import numpy as np
 import cv2
+
+# Suppress protobuf symbol_database deprecation warning emitted by MediaPipe internals
+warnings.filterwarnings("ignore", category=UserWarning, module="google.protobuf.symbol_database")
+warnings.filterwarnings("ignore", message=".*SymbolDatabase.GetPrototype.*")
 
 try:
     import mediapipe as mp
