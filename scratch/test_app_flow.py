@@ -10,7 +10,7 @@ print("Initializing BGMMasterApp...")
 app = BGMMasterApp()
 app.withdraw() # hide GUI window
 
-print(f"App initialized. Audio player engine - use_pygame: {app.audio_player.use_pygame}, use_wmp: {app.audio_player.use_wmp}")
+print(f"App initialized. Audio player engine - use_pygame: {app.audio_player.use_pygame}, use_net: {app.audio_player.use_net}")
 print(f"Playlist len: {len(app.playlist)}")
 
 if app.playlist:
@@ -39,7 +39,7 @@ if app.playlist:
     print(f"After Play/Pause toggle - is_playing: {app.audio_player.is_playing}, is_paused: {app.audio_player.is_paused}")
 
 app.audio_player.stop()
-if hasattr(app.audio_player, "wmp") and app.audio_player.wmp:
-    app.audio_player.wmp.close()
+if hasattr(app.audio_player, "net_engine") and app.audio_player.net_engine:
+    app.audio_player.net_engine.close()
 app.destroy()
 print("App test finished.")

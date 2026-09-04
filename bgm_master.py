@@ -183,8 +183,12 @@ theme_mgr = ThemeManager()
 # Robust Windows Media Player & Dual Audio Engine
 # =============================================================================
 
-class WMPController:
-    """Helper process controller for Windows Media Player (WMPlayer.OCX) via PowerShell stdin."""
+# =============================================================================
+# Robust Windows .NET MediaPlayer & Multi-Backend Dual Audio Engine
+# =============================================================================
+
+class NetAudioEngine:
+    """High-Performance Windows .NET MediaPlayer engine using persistent PowerShell pipeline."""
 
     def __init__(self):
         self.proc = None
@@ -198,10 +202,14 @@ class WMPController:
                     text=True,
                     bufsize=1
                 )
-                self._send('$wmp = New-Object -ComObject WMPlayer.OCX')
-                self._send('$wmp.settings.autoStart = $true')
+                self._send("Add-Type -AssemblyName PresentationCore")
+                self._send("$p1 = New-Object System.Windows.Media.MediaPlayer")
+                self._send("$p2 = New-Object System.Windows.Media.MediaPlayer")
+                self._send("$active = $p1")
+                self._send("$standby = $p2")
+                print("[AudioEngine] PowerShell .NET MediaPlayer backend initialized.")
             except Exception as e:
-                print(f"[WMPController] Init failed: {e}")
+                print(f"[AudioEngine] PowerShell .NET init failed: {e}")
                 self.proc = None
 
     def _send(self, cmd: str):
@@ -212,41 +220,67 @@ class WMPController:
             except Exception:
                 pass
 
-    def load_and_play(self, file_path: str):
-        abs_p = os.path.abspath(file_path).replace('/', '\\')
-        self._send(f'$wmp.URL = "{abs_p}"')
-        self._send('$wmp.controls.play()')
+    def load(self, file_path: str, volume: float = 0.8):
+        abs_p = os.path.normpath(os.path.abspath(file_path)).replace("'", "''")
+        self._send(f"$active.Open([System.Uri]'{abs_p}')")
+        self._send(f"$active.Volume = {volume:.2f}")
+
+    def play(self, volume: float = 0.8):
+        self._send(f"$active.Volume = {volume:.2f}")
+        self._send("$active.Play()")
 
     def pause(self):
-        self._send('$wmp.controls.pause()')
+        self._send("$active.Pause()")
 
     def resume(self):
-        self._send('$wmp.controls.play()')
+        self._send("$active.Play()")
 
     def stop(self):
-        self._send('$wmp.controls.stop()')
+        self._send("$active.Stop()")
+        self._send("$active.Close()")
+        self._send("$standby.Stop()")
+        self._send("$standby.Close()")
 
-    def set_volume(self, vol_pct: float):
-        v = int(max(0, min(100, vol_pct * 100)))
-        self._send(f'$wmp.settings.volume = {v}')
+    def set_volume(self, volume: float):
+        self._send(f"$active.Volume = {max(0.0, min(1.0, volume)):.2f}")
+
+    def seek(self, seconds: float):
+        self._send(f"$active.Position = [System.TimeSpan]::FromSeconds({seconds:.2f})")
+
+    def start_crossfade(self, next_file_path: str, volume: float = 0.8):
+        abs_p = os.path.normpath(os.path.abspath(next_file_path)).replace("'", "''")
+        self._send(f"$standby.Open([System.Uri]'{abs_p}')")
+        self._send("$standby.Volume = 0.0")
+        self._send("$standby.Play()")
+
+    def update_crossfade_ramp(self, progress: float, max_vol: float):
+        vol_act = max(0.0, min(1.0, (1.0 - progress) * max_vol))
+        vol_sb = max(0.0, min(1.0, progress * max_vol))
+        self._send(f"$active.Volume = {vol_act:.2f}")
+        self._send(f"$standby.Volume = {vol_sb:.2f}")
+
+    def finish_crossfade(self):
+        self._send("$active.Stop()")
+        self._send("$active.Close()")
+        self._send("$tmp = $active; $active = $standby; $standby = $tmp")
 
     def close(self):
         if self.proc:
             try:
-                self._send('$wmp.close()')
-                self._send('exit')
+                self.stop()
+                self._send("exit")
                 self.proc.terminate()
             except Exception:
                 pass
 
 
 class AudioPlayer:
-    """Audio Engine supporting dual track crossfade, WMP COM, and WinMM MCI / PyGame volume control."""
+    """Robust Audio Engine supporting .NET MediaPlayer, WinMM MCI, and Pygame mixer."""
 
     def __init__(self):
         self.use_pygame = False
-        self.use_wmp = False
-        self.wmp: Optional[WMPController] = None
+        self.use_net = False
+        self.net_engine: Optional[NetAudioEngine] = None
         self.current_file: Optional[str] = None
         self.is_playing: bool = False
         self.is_paused: bool = False
@@ -277,26 +311,34 @@ class AudioPlayer:
 
         if not self.use_pygame and sys.platform == "win32":
             try:
-                self.wmp = WMPController()
-                if self.wmp.proc is not None:
-                    self.use_wmp = True
-                    print("[AudioEngine] Windows Media Player COM backend initialized.")
+                self.net_engine = NetAudioEngine()
+                if self.net_engine.proc is not None:
+                    self.use_net = True
+                    print("[AudioEngine] Windows .NET MediaPlayer backend initialized.")
             except Exception as e:
-                print(f"[AudioEngine] WMP COM init failed: {e}")
+                print(f"[AudioEngine] .NET MediaPlayer init failed: {e}")
 
     def _mci_send(self, cmd: str) -> str:
         if sys.platform != "win32":
             return ""
-        buf = ctypes.create_unicode_buffer(256)
-        ctypes.windll.winmm.mciSendStringW(cmd, buf, 255, 0)
+        buf = ctypes.create_unicode_buffer(512)
+        ctypes.windll.winmm.mciSendStringW(cmd, buf, 511, 0)
         return buf.value
+
+    def _get_mci_short_path(self, path: str) -> str:
+        if sys.platform != "win32":
+            return path
+        norm = os.path.normpath(os.path.abspath(path))
+        buf = ctypes.create_unicode_buffer(512)
+        ctypes.windll.kernel32.GetShortPathNameW(norm, buf, 512)
+        return buf.value if buf.value else norm
 
     def load(self, file_path: str):
         if not file_path or not os.path.exists(file_path):
             raise FileNotFoundError(f"Audio file not found: {file_path}")
 
         self.stop()
-        self.current_file = os.path.abspath(file_path)
+        self.current_file = os.path.normpath(os.path.abspath(file_path))
         self.is_playing = False
         self.is_paused = False
         self.pause_offset = 0.0
@@ -311,19 +353,17 @@ class AudioPlayer:
                     self.duration_sec = 210.0
                 return
             except Exception as e:
-                print(f"[AudioEngine] PyGame load failed, trying WMP: {e}")
+                print(f"[AudioEngine] PyGame load failed: {e}")
 
-        if self.use_wmp and self.wmp:
+        if self.use_net and self.net_engine:
+            self.net_engine.load(self.current_file, volume=self.volume)
             self.duration_sec = 210.0
             return
 
         if sys.platform == "win32":
             self._mci_send(f'close {self.active_alias}')
-            short_buf = ctypes.create_unicode_buffer(512)
-            ctypes.windll.kernel32.GetShortPathNameW(self.current_file, short_buf, 512)
-            path_to_open = short_buf.value if short_buf.value else self.current_file
-
-            self._mci_send(f'open "{path_to_open}" type mpegvideo alias {self.active_alias}')
+            short_path = self._get_mci_short_path(self.current_file)
+            self._mci_send(f'open "{short_path}" type mpegvideo alias {self.active_alias}')
             len_str = self._mci_send(f'status {self.active_alias} length')
             try:
                 self.duration_sec = float(len_str) / 1000.0 if len_str else 210.0
@@ -337,8 +377,8 @@ class AudioPlayer:
         if self.is_paused:
             if self.use_pygame:
                 pygame.mixer.music.unpause()
-            elif self.use_wmp and self.wmp:
-                self.wmp.resume()
+            elif self.use_net and self.net_engine:
+                self.net_engine.resume()
             elif sys.platform == "win32":
                 self._mci_send(f'resume {self.active_alias}')
             self.is_playing = True
@@ -349,9 +389,8 @@ class AudioPlayer:
         if self.use_pygame:
             pygame.mixer.music.play()
             pygame.mixer.music.set_volume(self.volume)
-        elif self.use_wmp and self.wmp:
-            self.wmp.load_and_play(self.current_file)
-            self.wmp.set_volume(self.volume)
+        elif self.use_net and self.net_engine:
+            self.net_engine.play(volume=self.volume)
         elif sys.platform == "win32":
             self._mci_send(f'play {self.active_alias} from 0')
             self.set_volume(self.volume)
@@ -371,19 +410,16 @@ class AudioPlayer:
 
         next_duration = 210.0
 
-        if self.use_wmp and self.wmp:
-            self.wmp.load_and_play(next_file_path)
-            self.wmp.set_volume(self.volume)
-            self.current_file = next_file_path
+        if self.use_net and self.net_engine:
+            self.net_engine.start_crossfade(next_file_path, volume=self.volume)
+            self.current_file = os.path.normpath(os.path.abspath(next_file_path))
         elif sys.platform == "win32" and not self.use_pygame:
             self._mci_send(f'close {self.standby_alias}')
-            short_buf = ctypes.create_unicode_buffer(512)
-            ctypes.windll.kernel32.GetShortPathNameW(next_file_path, short_buf, 512)
-            path_to_open = short_buf.value if short_buf.value else next_file_path
-
-            self._mci_send(f'open "{path_to_open}" type mpegvideo alias {self.standby_alias}')
+            short_path = self._get_mci_short_path(next_file_path)
+            self._mci_send(f'open "{short_path}" type mpegvideo alias {self.standby_alias}')
             self._mci_send(f'setaudio {self.standby_alias} volume to 0')
             self._mci_send(f'play {self.standby_alias} from 0')
+            self.current_file = os.path.normpath(os.path.abspath(next_file_path))
         elif self.use_pygame:
             try:
                 sound = pygame.mixer.Sound(next_file_path)
@@ -402,8 +438,8 @@ class AudioPlayer:
         elapsed = time.time() - self.crossfade_start_time
         progress = min(1.0, elapsed / max(0.1, self.crossfade_duration))
 
-        if self.use_wmp and self.wmp:
-            self.wmp.set_volume(self.volume * progress)
+        if self.use_net and self.net_engine:
+            self.net_engine.update_crossfade_ramp(progress, self.volume)
         elif sys.platform == "win32" and not self.use_pygame:
             vol_active = int((1.0 - progress) * self.volume * 1000)
             vol_standby = int(progress * self.volume * 1000)
@@ -411,7 +447,9 @@ class AudioPlayer:
             self._mci_send(f'setaudio {self.standby_alias} volume to {vol_standby}')
 
         if progress >= 1.0:
-            if sys.platform == "win32" and not self.use_pygame and not self.use_wmp:
+            if self.use_net and self.net_engine:
+                self.net_engine.finish_crossfade()
+            elif sys.platform == "win32" and not self.use_pygame:
                 self._mci_send(f'stop {self.active_alias}')
                 self._mci_send(f'close {self.active_alias}')
                 self.active_alias, self.standby_alias = self.standby_alias, self.active_alias
@@ -423,8 +461,8 @@ class AudioPlayer:
         if self.is_playing and not self.is_paused:
             if self.use_pygame:
                 pygame.mixer.music.pause()
-            elif self.use_wmp and self.wmp:
-                self.wmp.pause()
+            elif self.use_net and self.net_engine:
+                self.net_engine.pause()
             elif sys.platform == "win32":
                 self._mci_send(f'pause {self.active_alias}')
             self.is_paused = True
@@ -436,11 +474,13 @@ class AudioPlayer:
                 pygame.mixer.music.stop()
             except Exception:
                 pass
-        elif self.use_wmp and self.wmp:
-            self.wmp.stop()
+        elif self.use_net and self.net_engine:
+            self.net_engine.stop()
         elif sys.platform == "win32":
             self._mci_send(f'stop {self.active_alias}')
+            self._mci_send(f'close {self.active_alias}')
             self._mci_send(f'stop {self.standby_alias}')
+            self._mci_send(f'close {self.standby_alias}')
 
         self.is_playing = False
         self.is_paused = False
@@ -451,8 +491,8 @@ class AudioPlayer:
         self.volume = max(0.0, min(1.0, volume))
         if self.use_pygame:
             pygame.mixer.music.set_volume(self.volume)
-        elif self.use_wmp and self.wmp:
-            self.wmp.set_volume(self.volume)
+        elif self.use_net and self.net_engine:
+            self.net_engine.set_volume(self.volume)
         elif sys.platform == "win32":
             vol_int = int(self.volume * 1000)
             self._mci_send(f'setaudio {self.active_alias} volume to {vol_int}')
@@ -474,10 +514,12 @@ class AudioPlayer:
     def seek(self, seconds: float):
         if not self.current_file:
             return
-        ms = int(seconds * 1000)
         was_playing = self.is_playing and not self.is_paused
 
-        if sys.platform == "win32" and not self.use_wmp:
+        if self.use_net and self.net_engine:
+            self.net_engine.seek(seconds)
+        elif sys.platform == "win32" and not self.use_pygame:
+            ms = int(seconds * 1000)
             self._mci_send(f'seek {self.active_alias} to {ms}')
             if was_playing:
                 self._mci_send(f'play {self.active_alias}')
@@ -486,6 +528,9 @@ class AudioPlayer:
                 pygame.mixer.music.set_pos(seconds)
             except Exception:
                 pass
+
+        self.start_time = time.time() - seconds
+        self.pause_offset = seconds
 
 
 # =============================================================================
@@ -2563,7 +2608,7 @@ class BGMMasterApp(ctk.CTk):
         raw_path = song.get("path")
         fpath = os.path.abspath(raw_path) if raw_path else ""
         file_exists = os.path.exists(fpath) if fpath else False
-        engine_init = (self.audio_player.use_pygame or (self.audio_player.use_wmp and self.audio_player.wmp is not None) or (sys.platform == "win32"))
+        engine_init = (self.audio_player.use_pygame or (self.audio_player.use_net and self.audio_player.net_engine is not None) or (sys.platform == "win32"))
 
         print("[PLAYER] Play requested")
         print(f"[PLAYER] Song: {song.get('title', 'Unknown')}")
@@ -3037,8 +3082,8 @@ class BGMMasterApp(ctk.CTk):
 
     def _on_quit(self):
         self.audio_player.stop()
-        if hasattr(self.audio_player, "wmp") and self.audio_player.wmp:
-            self.audio_player.wmp.close()
+        if hasattr(self.audio_player, "net_engine") and self.audio_player.net_engine:
+            self.audio_player.net_engine.close()
         if self.moodify_on:
             self._stop_moodify()
         self.destroy()
