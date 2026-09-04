@@ -1,830 +1,310 @@
 {
   "songs": [
     {
-      "id": "song_d76abc",
-      "title": "Adaavadi Video Song  LIK  Pradeep Ranganathan  Anirudh Ravichander  Krithi Shetty",
-      "artist": "Unknown Artist",
-      "mood": "Happy",
-      "path": "C:/Users/ASUS/Music/TAMIL NEW/Adaavadi Video Song  LIK  Pradeep Ranganathan  Anirudh Ravichander  Krithi Shetty.mp3"
-    },
-    {
-      "id": "song_2908de",
-      "title": "Payphone",
-      "artist": "02 Maroon 5",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Happy",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\02 Maroon 5 - Payphone.mp3"
-    },
-    {
-      "id": "song_0a26ba",
-      "title": "03-ENR~1",
-      "artist": "Unknown Artist",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\03-ENR~1.mp3"
-    },
-    {
-      "id": "song_50549a",
-      "title": "06-ENR~1",
-      "artist": "Unknown Artist",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Sad",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\06-ENR~1.mp3"
-    },
-    {
-      "id": "song_435a74",
-      "title": "I Wanna Love You",
-      "artist": "17-akon",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\17-akon - I Wanna Love You.mp3"
-    },
-    {
-      "id": "song_6f6902",
-      "title": "Kryptonite",
-      "artist": "3 Doors Down",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Excited",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\3 Doors Down - Kryptonite.mp3"
-    },
-    {
-      "id": "song_4e31f8",
-      "title": "a YEAH",
-      "artist": "Unknown Artist",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\a YEAH.mp3"
-    },
-    {
-      "id": "song_1a83d9",
-      "title": "Go Gyal [Bass Boosted]",
-      "artist": "Ahzee",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Ahzee - Go Gyal [Bass Boosted].mp3"
-    },
-    {
-      "id": "song_8d5430",
-      "title": "Jon Bellion",
-      "artist": "All Time Low",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\All Time Low - Jon Bellion.mp3"
-    },
-    {
-      "id": "song_ad5137",
-      "title": "Alan Walker",
-      "artist": "Alone",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Lonely",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Alone - Alan Walker.mp3"
-    },
-    {
-      "id": "song_ef0df2",
-      "title": "ONE DAY (Official Video)",
-      "artist": "ARASH feat Helena",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\ARASH feat Helena - ONE DAY (Official Video).mp3"
-    },
-    {
-      "id": "song_2249ef",
-      "title": "Hurts So Good",
-      "artist": "Astrid S",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Astrid S - Hurts So Good.mp3"
-    },
-    {
-      "id": "song_0fcf6a",
-      "title": "Famy ( Lyrics )",
-      "artist": "AVA",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\AVA - Famy ( Lyrics ).mp3"
-    },
-    {
-      "id": "song_fd532f",
-      "title": "Kings & Queens (Lyrics)",
-      "artist": "Ava Max",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Ava Max - Kings & Queens (Lyrics).mp3"
-    },
-    {
-      "id": "song_36561a",
-      "title": "Living Hell (Official Lyric Video)",
-      "artist": "Bella Poarch",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Bella Poarch - Living Hell (Official Lyric Video).mp3"
-    },
-    {
-      "id": "song_d410a4",
-      "title": "Imagine Dragons",
-      "artist": "Bones",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Bones - Imagine Dragons.mp3"
-    },
-    {
-      "id": "song_911189",
-      "title": "Criminal (Lyrics) _Mama I'm in love with a CRIMINAL_",
-      "artist": "Britney Spears",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Britney Spears - Criminal (Lyrics) _Mama I'm in love with a CRIMINAL_.mp3"
-    },
-    {
-      "id": "song_ab7cf5",
-      "title": "Arash(1)",
-      "artist": "Broken Angel (feat. Helena)",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Broken Angel (feat. Helena) - Arash(1).mp3"
-    },
-    {
-      "id": "song_378e48",
-      "title": "Sia(3)",
-      "artist": "Cheap Thrills (feat. Sean Paul)",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Cheap Thrills (feat. Sean Paul) - Sia(3).mp3"
-    },
-    {
-      "id": "song_2c07ca",
-      "title": "Rockabye (Lyrics) feat. Sean Paul & Anne-Marie",
-      "artist": "Clean Bandit",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Clean Bandit - Rockabye (Lyrics) feat. Sean Paul & Anne-Marie.mp3"
-    },
-    {
-      "id": "song_355cd6",
-      "title": "Sub Urban",
-      "artist": "Cradles",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Cradles - Sub Urban.mp3"
-    },
-    {
-      "id": "song_4c7630",
-      "title": "I'm good (Blue) LYRICS _I'm good, yeah, I'm feelin' alright_",
-      "artist": "David Guetta, Bebe Rexha",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\David Guetta, Bebe Rexha - I'm good (Blue) LYRICS _I'm good, yeah, I'm feelin' alright_.mp3"
-    },
-    {
-      "id": "song_b1e36e",
-      "title": "Powfu",
-      "artist": "death bed (coffee for your head)",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\death bed (coffee for your head) - Powfu.mp3"
-    },
-    {
-      "id": "song_777465",
-      "title": "Olivia Rodrigo",
-      "artist": "deja vu",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\deja vu - Olivia Rodrigo.mp3"
-    },
-    {
-      "id": "song_614360",
-      "title": "Sugar & Brownies (by Monoir) [Official Video]",
-      "artist": "DHARIA",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\DHARIA - Sugar & Brownies (by Monoir) [Official Video].mp3"
-    },
-    {
-      "id": "song_1f7635",
-      "title": "Diet Mountain Dew",
-      "artist": "Unknown Artist",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Diet Mountain Dew.mp3"
-    },
-    {
-      "id": "song_4e5c96",
-      "title": "DJ.Carlos.H.D.S.electro mix best songs house mix music 2009 2010 disco party club remix",
-      "artist": "Unknown Artist",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\DJ.Carlos.H.D.S.electro mix best songs house mix music 2009 2010 disco party club remix.mp3"
-    },
-    {
-      "id": "song_b30860",
-      "title": "Paint The Town Red (Lyrics)",
-      "artist": "Doja Cat",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Doja Cat - Paint The Town Red (Lyrics).mp3"
-    },
-    {
-      "id": "song_c406f1",
-      "title": "Woman (Lyrics)",
-      "artist": "Doja Cat",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Doja Cat - Woman (Lyrics).mp3"
-    },
-    {
-      "id": "song_69ae35",
-      "title": "Levitating (Lyrics) Ft. DaBaby",
-      "artist": "Dua Lipa",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Dua Lipa - Levitating (Lyrics) Ft. DaBaby.mp3"
-    },
-    {
-      "id": "song_db5752",
-      "title": "The Real Slim Shady (Edited)",
-      "artist": "Eminem",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Eminem - The Real Slim Shady (Edited).mp3"
-    },
-    {
-      "id": "song_be03cb",
-      "title": "Enemy_from_the_series_Arcane_League_of_Legends_Imagine_Drago",
-      "artist": "Unknown Artist",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Enemy_from_the_series_Arcane_League_of_Legends_Imagine_Drago.mp3"
-    },
-    {
-      "id": "song_017cff",
-      "title": "La Espada",
-      "artist": "Eternal Raijin",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Eternal Raijin - La Espada.mp3"
-    },
-    {
-      "id": "song_91162e",
-      "title": "The Final Countdown",
-      "artist": "Europe",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Europe - The Final Countdown.mp3"
-    },
-    {
-      "id": "song_1b2c12",
-      "title": "Alexander Rybak",
-      "artist": "Fairytale",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Fairytale - Alexander Rybak.mp3"
-    },
-    {
-      "id": "song_efa4e5",
-      "title": "Trevor Daniel",
-      "artist": "Falling",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Falling - Trevor Daniel.mp3"
-    },
-    {
-      "id": "song_ad29e3",
-      "title": "gangnam style",
-      "artist": "Unknown Artist",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\gangnam style.mp3"
-    },
-    {
-      "id": "song_8e596d",
-      "title": "Coolio",
-      "artist": "Gangsta s Paradise",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Gangsta s Paradise - Coolio.mp3"
-    },
-    {
-      "id": "song_e97e61",
-      "title": "I Stand Alone",
-      "artist": "Godsmack",
+      "id": "song_75b028",
+      "title": "Sai Abhyankkar",
+      "artist": "Aasa Kooda  From Think Indie",
       "album": "Local Album",
       "duration": "03:30",
       "mood": "Romantic",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Godsmack - I Stand Alone.mp3"
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Aasa Kooda  From Think Indie - Sai Abhyankkar.flac"
     },
     {
-      "id": "song_8c8e63",
-      "title": "Hanumankind  Big Dawgs  Ft. Kalmi (Official Music Video)  Def Jam India (1)",
+      "id": "song_9e28ac",
+      "title": "Lyrical  The Paradise  Nani  Anirudh Ravichander  Srikanth Odela",
+      "artist": "Aaya Sher",
+      "album": "Local Album",
+      "duration": "09:47",
+      "mood": "Excited",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Aaya Sher - Lyrical  The Paradise  Nani  Anirudh Ravichander  Srikanth Odela.mp3"
+    },
+    {
+      "id": "song_67323c",
+      "title": "Adaavadi Video Song  LIK  Pradeep Ranganathan  Anirudh Ravichander  Krithi Shetty",
+      "artist": "Unknown Artist",
+      "album": "Local Album",
+      "duration": "06:37",
+      "mood": "Happy",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Adaavadi Video Song  LIK  Pradeep Ranganathan  Anirudh Ravichander  Krithi Shetty.mp3"
+    },
+    {
+      "id": "song_dcd78f",
+      "title": "Hukum Reloaded (From  Jailer 2 )",
+      "artist": "Anirudh Ravichander",
+      "album": "Local Album",
+      "duration": "03:30",
+      "mood": "Excited",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Anirudh Ravichander - Hukum Reloaded (From  Jailer 2 ).mp3"
+    },
+    {
+      "id": "song_57c843",
+      "title": "Manasilaayo (From  Vettaiyan )",
+      "artist": "Anirudh Ravichander",
+      "album": "Local Album",
+      "duration": "03:30",
+      "mood": "Romantic",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Anirudh Ravichander - Manasilaayo (From  Vettaiyan ).mp3"
+    },
+    {
+      "id": "song_fa72f8",
+      "title": "Sawadeeka (From  Vidaamuyarchi )",
+      "artist": "Anirudh Ravichander",
+      "album": "Local Album",
+      "duration": "03:30",
+      "mood": "Romantic",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Anirudh Ravichander - Sawadeeka (From  Vidaamuyarchi ).mp3"
+    },
+    {
+      "id": "song_82b082",
+      "title": "Vaathi Coming",
+      "artist": "Anirudh Ravichander",
+      "album": "Local Album",
+      "duration": "03:30",
+      "mood": "Chill",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Anirudh Ravichander - Vaathi Coming.mp3"
+    },
+    {
+      "id": "song_022e37",
+      "title": "Athu Thalore Video Song  Suriya's Karuppu  RJ Balaji   @SaiAbhyankkar   Dream Warrior Pictures",
+      "artist": "Unknown Artist",
+      "album": "Local Album",
+      "duration": "07:46",
+      "mood": "Lonely",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Athu Thalore Video Song  Suriya's Karuppu  RJ Balaji   @SaiAbhyankkar   Dream Warrior Pictures.mp3"
+    },
+    {
+      "id": "song_529b18",
+      "title": "Thaai Kelavi (From  Thiruchitrambalam )",
+      "artist": "Dhanush",
+      "album": "Local Album",
+      "duration": "03:30",
+      "mood": "Chill",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Dhanush  - Thaai Kelavi (From  Thiruchitrambalam ).mp3"
+    },
+    {
+      "id": "song_7baecf",
+      "title": "God Mode Lyric Video  Karuppu  Suriya  RJB  Trisha  @SaiAbhyankkar  Dream Warrior Pictures",
+      "artist": "Unknown Artist",
+      "album": "Local Album",
+      "duration": "04:10",
+      "mood": "Sad",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\God Mode Lyric Video  Karuppu  Suriya  RJB  Trisha  @SaiAbhyankkar  Dream Warrior Pictures.mp3"
+    },
+    {
+      "id": "song_4a907d",
+      "title": "Jana Nayagan  Oru Pere Varalaaru Lyrical  Thalapathy Vijay  H Vinoth Anirudh KVN Vishal Mishra",
+      "artist": "Unknown Artist",
+      "album": "Local Album",
+      "duration": "07:49",
+      "mood": "Chill",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Jana Nayagan  Oru Pere Varalaaru Lyrical  Thalapathy Vijay  H Vinoth Anirudh KVN Vishal Mishra.mp3"
+    },
+    {
+      "id": "song_559fd8",
+      "title": "Raavana Mavandaa Lyrical  Thalapathy Vijay  Pooja Hegde  H Vinoth  Anirudh  KVN (1)",
+      "artist": "Jana Nayagan",
+      "album": "Local Album",
+      "duration": "03:38",
+      "mood": "Chill",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Jana Nayagan - Raavana Mavandaa Lyrical  Thalapathy Vijay  Pooja Hegde  H Vinoth  Anirudh  KVN (1).mp3"
+    },
+    {
+      "id": "song_dee39d",
+      "title": "Raavana Mavandaa Lyrical  Thalapathy Vijay  Pooja Hegde  H Vinoth  Anirudh  KVN",
+      "artist": "Jana Nayagan",
+      "album": "Local Album",
+      "duration": "03:38",
+      "mood": "Chill",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Jana Nayagan - Raavana Mavandaa Lyrical  Thalapathy Vijay  Pooja Hegde  H Vinoth  Anirudh  KVN.mp3"
+    },
+    {
+      "id": "song_5bc721",
+      "title": "Kannae Kanmaniye 8K  Tere Ishk Mein  Dhanush,Kriti  AR Rahman  Aanand L Rai  Bhushan K",
+      "artist": "Unknown Artist",
+      "album": "Local Album",
+      "duration": "12:14",
+      "mood": "Sad",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Kannae Kanmaniye 8K  Tere Ishk Mein  Dhanush,Kriti  AR Rahman  Aanand L Rai  Bhushan K.mp3"
+    },
+    {
+      "id": "song_ea2b76",
+      "title": "Sai Abhyankkar",
+      "artist": "Katchi Sera  From Think Indie",
+      "album": "Local Album",
+      "duration": "03:30",
+      "mood": "Romantic",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Katchi Sera  From Think Indie - Sai Abhyankkar.flac"
+    },
+    {
+      "id": "song_37275e",
+      "title": "Ragile Ragile Lyrical Video  Vijay Deverakonda, Bhagyashrii  Anirudh Ravichander Gowtam",
+      "artist": "Kingdom",
+      "album": "Local Album",
+      "duration": "05:29",
+      "mood": "Chill",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Kingdom - Ragile Ragile Lyrical Video  Vijay Deverakonda, Bhagyashrii  Anirudh Ravichander Gowtam.mp3"
+    },
+    {
+      "id": "song_ce8600",
+      "title": "Video Song (Film Version)  With Love  Abishan Jeevinth  Anaswara  Sean Roldan",
+      "artist": "Marandhu Poche",
+      "album": "Local Album",
+      "duration": "08:03",
+      "mood": "Happy",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Marandhu Poche - Video Song (Film Version)  With Love  Abishan Jeevinth  Anaswara  Sean Roldan.mp3"
+    },
+    {
+      "id": "song_b69b2d",
+      "title": "Anirudh Ravichander",
+      "artist": "Mobsta",
+      "album": "Local Album",
+      "duration": "03:30",
+      "mood": "Chill",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Mobsta - Anirudh Ravichander.flac"
+    },
+    {
+      "id": "song_9dc415",
+      "title": "Anirudh Ravichander",
+      "artist": "Monica From Coolie Tamil",
+      "album": "Local Album",
+      "duration": "03:30",
+      "mood": "Chill",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Monica From Coolie Tamil - Anirudh Ravichander.flac"
+    },
+    {
+      "id": "song_e9ffe7",
+      "title": "Mutta Kalakki Music Video  Youth  Ken Karunaas  Suraj Venjaramoodu  GV Prakash Kumar",
+      "artist": "Unknown Artist",
+      "album": "Local Album",
+      "duration": "05:44",
+      "mood": "Romantic",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Mutta Kalakki Music Video  Youth  Ken Karunaas  Suraj Venjaramoodu  GV Prakash Kumar.mp3"
+    },
+    {
+      "id": "song_0202d1",
+      "title": "Sai Abhyankkar",
+      "artist": "Oorum Blood  From Dude",
+      "album": "Local Album",
+      "duration": "03:30",
+      "mood": "Sad",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Oorum Blood  From Dude - Sai Abhyankkar.flac"
+    },
+    {
+      "id": "song_791667",
+      "title": "Oorum Blood Movie Version  Dude  Pradeep R, Mamitha  @SaiAbhyankkar Keerthiswaran  Paal Dabba",
+      "artist": "Unknown Artist",
+      "album": "Local Album",
+      "duration": "04:05",
+      "mood": "Chill",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Oorum Blood Movie Version  Dude  Pradeep R, Mamitha  @SaiAbhyankkar Keerthiswaran  Paal Dabba.mp3"
+    },
+    {
+      "id": "song_785fb7",
+      "title": "Pavazha Malli (From Think Indie)",
+      "artist": "Unknown Artist",
+      "album": "Local Album",
+      "duration": "08:34",
+      "mood": "Romantic",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Pavazha Malli (From Think Indie).mp3"
+    },
+    {
+      "id": "song_88aa11",
+      "title": "Pottala_Muttaye_From_Thalaivan_Thalaivii_Santhosh_Narayanan",
       "artist": "Unknown Artist",
       "album": "Local Album",
       "duration": "03:30",
       "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Hanumankind  Big Dawgs  Ft. Kalmi (Official Music Video)  Def Jam India (1).mp3"
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Pottala_Muttaye_From_Thalaivan_Thalaivii_Santhosh_Narayanan.flac"
     },
     {
-      "id": "song_198465",
-      "title": "Hanumankind  Big Dawgs  Ft. Kalmi (Official Music Video)  Def Jam India",
+      "id": "song_e959bd",
+      "title": "Anirudh Ravichander",
+      "artist": "Powerhouse From Coolie Tamil",
+      "album": "Local Album",
+      "duration": "03:30",
+      "mood": "Chill",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Powerhouse From Coolie Tamil - Anirudh Ravichander.flac"
+    },
+    {
+      "id": "song_67de6a",
+      "title": "Raga of Revenge  DC  Lokesh Kanagaraj  Anirudh  Wamiqa Gabbi  Sun Pictures",
       "artist": "Unknown Artist",
       "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Hanumankind  Big Dawgs  Ft. Kalmi (Official Music Video)  Def Jam India.mp3"
+      "duration": "04:23",
+      "mood": "Lonely",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Raga of Revenge  DC  Lokesh Kanagaraj  Anirudh  Wamiqa Gabbi  Sun Pictures.mp3"
     },
     {
-      "id": "song_28248e",
-      "title": "Headstrong By Trapt",
+      "id": "song_db27c7",
+      "title": "Rekka Rekka Video Song  Bison Kaalamaadan  Dhruv  Mari Selvaraj  Nivas K Prasanna  Arivu Vedan",
       "artist": "Unknown Artist",
       "album": "Local Album",
-      "duration": "03:30",
+      "duration": "05:22",
       "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Headstrong By Trapt.mp3"
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Rekka Rekka Video Song  Bison Kaalamaadan  Dhruv  Mari Selvaraj  Nivas K Prasanna  Arivu Vedan.mp3"
     },
     {
-      "id": "song_c823e4",
-      "title": "Glass Animals",
-      "artist": "Heat Waves",
+      "id": "song_fbf8f5",
+      "title": "Aasa Kooda (Music Video)  Thejo Bharathwaj  Preity Mukundhan  Sai Smriti",
+      "artist": "Sai Abhyankkar",
+      "album": "Local Album",
+      "duration": "03:48",
+      "mood": "Chill",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Sai Abhyankkar - Aasa Kooda (Music Video)  Thejo Bharathwaj  Preity Mukundhan  Sai Smriti.mp3"
+    },
+    {
+      "id": "song_d36e65",
+      "title": "Katchi Sera (Music Video)  Samyuktha  Ken Royson  Think Indie",
+      "artist": "Sai Abhyankkar",
+      "album": "Local Album",
+      "duration": "03:04",
+      "mood": "Chill",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Sai Abhyankkar - Katchi Sera (Music Video)  Samyuktha  Ken Royson  Think Indie.mp3"
+    },
+    {
+      "id": "song_06e409",
+      "title": "Anirudh Ravichander",
+      "artist": "Salambala From Madharaasi",
+      "album": "Local Album",
+      "duration": "03:30",
+      "mood": "Lonely",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Salambala From Madharaasi - Anirudh Ravichander.flac"
+    },
+    {
+      "id": "song_a97778",
+      "title": "Kaavaalaa (From  Jailer )",
+      "artist": "Shilpa Rao",
       "album": "Local Album",
       "duration": "03:30",
       "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Heat Waves - Glass Animals.mp3"
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Shilpa Rao - Kaavaalaa (From  Jailer ).mp3"
     },
     {
-      "id": "song_dfff7b",
-      "title": "XXXTentacion",
-      "artist": "Hope",
+      "id": "song_9def3d",
+      "title": "Sai Abhyankkar",
+      "artist": "Sithira Puthiri  From Think Indie",
       "album": "Local Album",
       "duration": "03:30",
       "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Hope - XXXTentacion.mp3"
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Sithira Puthiri  From Think Indie - Sai Abhyankkar.flac"
     },
     {
-      "id": "song_1b6d05",
-      "title": "Coldplay",
-      "artist": "Hymn for the Weekend",
+      "id": "song_3e46cf",
+      "title": "Sai Abhyankkar",
+      "artist": "Vizhi Veekura  From Think Indie",
       "album": "Local Album",
       "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Hymn for the Weekend - Coldplay.mp3"
+      "mood": "Sad",
+      "path": "C:/Users/ASUS/Documents/moodify/Moodify/Sample Audios/TAMIL NEW\\Vizhi Veekura  From Think Indie - Sai Abhyankkar.flac"
     },
     {
-      "id": "song_7581eb",
-      "title": "K-391",
-      "artist": "Ignite",
+      "id": "song_689b07",
+      "title": "Sahiba",
+      "artist": "Aditya Rikhari",
       "album": "Local Album",
       "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Ignite - K-391.mp3"
-    },
-    {
-      "id": "song_51e7d3",
-      "title": "Lil Nas X",
-      "artist": "INDUSTRY BABY",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\INDUSTRY BABY - Lil Nas X.mp3"
-    },
-    {
-      "id": "song_b47fd0",
-      "title": "Harleys In Hawaii (Lyrics) You and I, Ridin' Harleys in Hawaii-i-i",
-      "artist": "Katy Perry",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Katy Perry - Harleys In Hawaii (Lyrics) You and I, Ridin' Harleys in Hawaii-i-i.mp3"
-    },
-    {
-      "id": "song_5d5fc2",
-      "title": "BLOODY MARY (Tik Tok Remix  Speed Up) Wednesday Addams  Dance Scene",
-      "artist": "LADY GAGA",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\LADY GAGA - BLOODY MARY (Tik Tok Remix  Speed Up) Wednesday Addams  Dance Scene.mp3"
-    },
-    {
-      "id": "song_1bd96e",
-      "title": "Alec Benjamin(1)",
-      "artist": "Let Me Down Slowly",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Let Me Down Slowly - Alec Benjamin(1).mp3"
-    },
-    {
-      "id": "song_d66686",
-      "title": "DJ Snake",
-      "artist": "Let Me Love You",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Let Me Love You - DJ Snake.mp3"
-    },
-    {
-      "id": "song_f3d90b",
-      "title": "Easier To Run",
-      "artist": "Linkin Park",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Linkin Park - Easier To Run.mp3"
-    },
-    {
-      "id": "song_b4fc49",
-      "title": "In The End",
-      "artist": "Linkin Park",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Linkin Park - In The End.mp3"
-    },
-    {
-      "id": "song_78ab30",
-      "title": "Numb",
-      "artist": "Linkin Park",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Linkin Park - Numb.mp3"
-    },
-    {
-      "id": "song_1375ee",
-      "title": "Cheriimoya",
-      "artist": "Living Life, In The Night",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Living Life, In The Night - Cheriimoya.mp3"
-    },
-    {
-      "id": "song_13fd21",
-      "title": "CKay",
-      "artist": "love nwantiti (feat. Franglish) (French Remix)",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\love nwantiti (feat. Franglish) (French Remix) - CKay.mp3"
-    },
-    {
-      "id": "song_cd3c9b",
-      "title": "iamnotshane",
-      "artist": "Maybe My Soulmate Died",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Maybe My Soulmate Died - iamnotshane.mp3"
-    },
-    {
-      "id": "song_7506ce",
-      "title": "Michael_Bubl_-_Feeling_Good_Lyric_(getmp3.pro)",
-      "artist": "Unknown Artist",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Michael_Bubl_-_Feeling_Good_Lyric_(getmp3.pro).mp3"
-    },
-    {
-      "id": "song_6afe9d",
-      "title": "Our Last Night",
-      "artist": "MIDDLE OF THE NIGHT",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\MIDDLE OF THE NIGHT - Our Last Night.mp3"
-    },
-    {
-      "id": "song_f9424e",
-      "title": "missing u",
-      "artist": "Unknown Artist",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\missing u.mp3"
-    },
-    {
-      "id": "song_7fbf15",
-      "title": "Eminem",
-      "artist": "Mockingbird",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Mockingbird - Eminem.mp3"
-    },
-    {
-      "id": "song_b2224a",
-      "title": "\ub9ac\uc0ac (LISA)",
-      "artist": "MONEY",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\MONEY - \ub9ac\uc0ac (LISA).mp3"
-    },
-    {
-      "id": "song_600b3c",
-      "title": "Bazzi",
-      "artist": "Myself",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Myself - Bazzi.mp3"
-    },
-    {
-      "id": "song_a38666",
-      "title": "Beggin' (LyricsTesto)",
-      "artist": "M\u00e5neskin",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\M\u00e5neskin - Beggin' (LyricsTesto).mp3"
-    },
-    {
-      "id": "song_0f132b",
-      "title": "Fight Back (LyricsLyric Video)",
-      "artist": "NEFFEX",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\NEFFEX - Fight Back (LyricsLyric Video).mp3"
-    },
-    {
-      "id": "song_cb6699",
-      "title": "Darkside (Lyrics)",
-      "artist": "NEONI",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\NEONI - Darkside (Lyrics).mp3"
-    },
-    {
-      "id": "song_bea531",
-      "title": "fired_up",
-      "artist": "NFS MW",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\NFS MW - fired_up.mp3"
-    },
-    {
-      "id": "song_a7d953",
-      "title": "Royal   the Serpent",
-      "artist": "overwhelmed",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\overwhelmed - Royal   the Serpent.mp3"
-    },
-    {
-      "id": "song_86fcf9",
-      "title": "Starla Edney",
-      "artist": "Queen of Hearts",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Queen of Hearts - Starla Edney.mp3"
-    },
-    {
-      "id": "song_967ac3",
-      "title": "Ride It",
-      "artist": "Unknown Artist",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Ride It.mp3"
-    },
-    {
-      "id": "song_3789d1",
-      "title": "Dandelions (Lyrics)",
-      "artist": "Ruth B.",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Ruth B. - Dandelions (Lyrics).mp3"
-    },
-    {
-      "id": "song_fb53f4",
-      "title": "Espresso (Lyrics)",
-      "artist": "Sabrina Carpenter",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Sabrina Carpenter - Espresso (Lyrics).mp3"
-    },
-    {
-      "id": "song_5ddd6c",
-      "title": "Serena",
-      "artist": "Safari",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Safari - Serena.mp3"
-    },
-    {
-      "id": "song_84eb72",
-      "title": "Wiz Khalifa",
-      "artist": "See You Again (feat. Charlie Puth)",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\See You Again (feat. Charlie Puth) - Wiz Khalifa.mp3"
-    },
-    {
-      "id": "song_7cd6e1",
-      "title": "SHADOW...(feat_eminem)",
-      "artist": "Unknown Artist",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\SHADOW...(feat_eminem).mp3"
-    },
-    {
-      "id": "song_7aa3ad",
-      "title": "Hey Sexy LadyM",
-      "artist": "Shaggy",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Shaggy - Hey Sexy LadyM.mp3"
-    },
-    {
-      "id": "song_bf008e",
-      "title": "Shalala lala venga boys",
-      "artist": "Unknown Artist",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Shalala lala venga boys.mp3"
-    },
-    {
-      "id": "song_68baaa",
-      "title": "Backstreet Boys",
-      "artist": "Show Me The Meaning",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Show Me The Meaning - Backstreet Boys.mp3"
-    },
-    {
-      "id": "song_b1fb70",
-      "title": "SHOW_ME_THE_MEANING",
-      "artist": "Unknown Artist",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\SHOW_ME_THE_MEANING.mp3"
-    },
-    {
-      "id": "song_07f241",
-      "title": "Unstoppable (Lyrics)",
-      "artist": "Sia",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Sia - Unstoppable (Lyrics).mp3"
-    },
-    {
-      "id": "song_9098e1",
-      "title": "Infected (lyrics)",
-      "artist": "Sickick",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Sickick - Infected (lyrics).mp3"
-    },
-    {
-      "id": "song_dc1ca0",
-      "title": "Eminem",
-      "artist": "Sing For The Moment",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Sing For The Moment - Eminem.mp3"
-    },
-    {
-      "id": "song_4033ed",
-      "title": "I'm Shipping Up To Boston - Dropkick Murphys",
-      "artist": "Soundtrack The Departed",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Soundtrack The Departed - I'm Shipping Up To Boston - Dropkick Murphys.mp3"
-    },
-    {
-      "id": "song_082923",
-      "title": "The Weeknd",
-      "artist": "Starboy",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Starboy - The Weeknd.mp3"
-    },
-    {
-      "id": "song_ebfc1c",
-      "title": "My Hearts A Stereo",
-      "artist": "Stereo Hearts",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Stereo Hearts - My Hearts A Stereo.mp3"
-    },
-    {
-      "id": "song_987d9e",
-      "title": "Chop Suey!",
-      "artist": "System Of A Down",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\System Of A Down - Chop Suey!.mp3"
-    },
-    {
-      "id": "song_cf75e5",
-      "title": "Blinding Lights (Official Audio)",
-      "artist": "The Weeknd",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\The Weeknd - Blinding Lights (Official Audio).mp3"
-    },
-    {
-      "id": "song_fd758e",
-      "title": "Charlie Puth",
-      "artist": "We Don t Talk Anymore (feat. Selena Gomez)",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\We Don t Talk Anymore (feat. Selena Gomez) - Charlie Puth.mp3"
-    },
-    {
-      "id": "song_f54129",
-      "title": "Into Your Arms (Lyrics) ft. Ava Max - [No Rap]",
-      "artist": "Witt Lowry",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Witt Lowry - Into Your Arms (Lyrics) ft. Ava Max - [No Rap].mp3"
-    },
-    {
-      "id": "song_904d90",
-      "title": "Fifth Harmony",
-      "artist": "Worth It (feat. Kid Ink)",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH\\Worth It (feat. Kid Ink) - Fifth Harmony.mp3"
-    },
-    {
-      "id": "song_6a7cdb",
-      "title": "Payphone",
-      "artist": "02 Maroon 5",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/ENGLISH/02 Maroon 5 - Payphone.mp3"
-    },
-    {
-      "id": "song_6f6154",
-      "title": "Muthuchippi",
-      "artist": "01",
-      "album": "Local Album",
-      "duration": "03:30",
-      "mood": "Chill",
-      "path": "C:/Users/ASUS/Music/MALAYALAM OLD/01 - Muthuchippi.mp3"
+      "mood": "Lonely",
+      "path": "C:/Users/ASUS/Music/HINDI NEW/Aditya Rikhari - Sahiba.mp3"
     }
   ]
 }
