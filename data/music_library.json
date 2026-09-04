@@ -85,7 +85,7 @@
       "artist": "Alone",
       "album": "Local Album",
       "duration": "03:30",
-      "mood": "Chill",
+      "mood": "Lonely",
       "path": "C:/Users/ASUS/Music/ENGLISH\\Alone - Alan Walker.mp3"
     },
     {
@@ -364,7 +364,7 @@
       "artist": "Unknown Artist",
       "album": "Local Album",
       "duration": "03:30",
-      "mood": "Hehe",
+      "mood": "Chill",
       "path": "C:/Users/ASUS/Music/ENGLISH\\Hanumankind  Big Dawgs  Ft. Kalmi (Official Music Video)  Def Jam India.mp3"
     },
     {
@@ -807,6 +807,24 @@
       "duration": "03:30",
       "mood": "Chill",
       "path": "C:/Users/ASUS/Music/ENGLISH\\Worth It (feat. Kid Ink) - Fifth Harmony.mp3"
+    },
+    {
+      "id": "song_6a7cdb",
+      "title": "Payphone",
+      "artist": "02 Maroon 5",
+      "album": "Local Album",
+      "duration": "03:30",
+      "mood": "Chill",
+      "path": "C:/Users/ASUS/Music/ENGLISH/02 Maroon 5 - Payphone.mp3"
+    },
+    {
+      "id": "song_6f6154",
+      "title": "Muthuchippi",
+      "artist": "01",
+      "album": "Local Album",
+      "duration": "03:30",
+      "mood": "Chill",
+      "path": "C:/Users/ASUS/Music/MALAYALAM OLD/01 - Muthuchippi.mp3"
     }
   ]
 }

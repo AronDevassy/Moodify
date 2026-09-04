@@ -2,12 +2,19 @@
 BGM MASTER V1 - Offline Music Player & Moodify AI Engine.
 
 Complete offline desktop music player application built with CustomTkinter (CTk):
-  - Functional Moodify AI CTkSwitch anchored in Right AI Panel below live camera preview
+  - Robust Windows Media Player (WMPlayer.OCX) + Dual Audio Engine Architecture
+  - Shared Fixed 6-Column Grid Layout (ARTWORK: 64px | TITLE: 38% | ARTIST: 27% | MOOD: 13% | TIME: 8% | ACTION: 50px)
+  - Ample Artist Column Space & Straight Vertical Alignment
+  - Strict Sidebar Section Order: LIBRARY -> DEFAULT MOODS -> CUSTOM MOODS -> PLAYLISTS
+  - Fixed Immutable Default Mood Order (Romantic, Happy, Sad, Lonely, Chill, Excited)
+  - Live Facial Expression Progress Visualization (CTkProgressBar + Confidence %) in Right AI Panel
+  - Fixed Small Compact Camera Preview (240x160 px) in Right AI Panel
+  - Permanent Window-Level Right AI Panel (Row 0, Column 2)
+  - Persistent, Always-Visible Moodify AI CTkSwitch below Live Camera Preview
+  - Random AI Track Selection with Anti-Repeat Recent History
   - Custom Mood Deletion (- button) with confirmation dialog (Default moods preserved)
   - Visible Scrollable Sidebar for Moods & Custom User Playlists
-  - Dedicated Grid Geometry: Overlap-Free Player Bar & Full-Page Expanding Music Library Table
   - Dark & Light Mode Theme Support via CTk appearance modes
-  - Single-Window Page Navigation with Header Back Buttons
   - Profile Management & Manual Button-Based Face Registration (2 Compulsory Captures)
   - Moodify AI Engine: 10s Initial Analysis, Continuous Background Mood Buffer,
     Automatic Next-Track Queueing, 4s Crossfade, and Facial Emotion Detection.
@@ -23,7 +30,9 @@ import json
 import math
 import uuid
 import ctypes
+import random
 import threading
+import subprocess
 import warnings
 from collections import Counter
 from typing import Optional, List, Dict, Tuple, Any
@@ -52,7 +61,7 @@ from src.predict_model import FaceMoodPredictor, CONFIDENCE_THRESHOLD, Predictio
 
 
 # =============================================================================
-# CustomTkinter Configuration & Constants
+# CustomTkinter Configuration & Helpers
 # =============================================================================
 
 ctk.set_appearance_mode("Dark")
@@ -76,14 +85,29 @@ SUPPORTED_AUDIO_EXTS = (".mp3", ".wav", ".m4a", ".flac", ".ogg")
 # Emotion to Mood Mapping
 EMOTION_TO_MOOD = {
     "HAPPY": "Happy",
+    "JOY": "Happy",
     "SAD": "Sad",
     "ANGRY": "Excited",
     "SURPRISED": "Excited",
+    "SURPRISE": "Excited",
     "NEUTRAL": "Chill",
     "FEAR": "Lonely",
     "DISGUST": "Lonely",
+    "PEACEFUL": "Chill",
+    "ROMANTIC": "Romantic",
+    "LOVE": "Romantic",
     "UNCERTAIN": "Chill"
 }
+
+RELATED_MOODS = {
+    "Happy": ["Excited", "Chill", "Romantic"],
+    "Sad": ["Lonely", "Chill"],
+    "Excited": ["Happy", "Chill"],
+    "Chill": ["Romantic", "Happy", "Lonely"],
+    "Lonely": ["Sad", "Chill"],
+    "Romantic": ["Chill", "Happy"]
+}
+
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 PROFILES_FILE = os.path.join(DATA_DIR, "profiles.json")
@@ -91,6 +115,25 @@ LIBRARY_FILE = os.path.join(DATA_DIR, "music_library.json")
 MOODS_FILE = os.path.join(DATA_DIR, "moods.json")
 PLAYLISTS_FILE = os.path.join(DATA_DIR, "playlists.json")
 SETTINGS_FILE = os.path.join(DATA_DIR, "settings.json")
+
+
+def truncate_text(text: str, max_len: int = 28) -> str:
+    """Safely truncate long string to max_len with ellipsis to prevent column overflow."""
+    if not text:
+        return ""
+    if len(text) <= max_len:
+        return text
+    return text[: max_len - 3] + "..."
+
+
+def configure_music_table_columns(grid_container: ctk.CTkFrame):
+    """Applies unified 6-column grid proportions (ARTWORK: 64px, TITLE: 38%, ARTIST: 27%, MOOD: 13%, TIME: 8%, ACTION: 50px)."""
+    grid_container.grid_columnconfigure(0, weight=0, minsize=64)   # 0: ARTWORK (Cover thumbnail)
+    grid_container.grid_columnconfigure(1, weight=38, minsize=150) # 1: TITLE (Flexible primary)
+    grid_container.grid_columnconfigure(2, weight=27, minsize=120) # 2: ARTIST (Flexible secondary - Ample Space!)
+    grid_container.grid_columnconfigure(3, weight=13, minsize=110) # 3: MOOD (Controlled badge)
+    grid_container.grid_columnconfigure(4, weight=8, minsize=65)   # 4: DURATION (Controlled right-aligned)
+    grid_container.grid_columnconfigure(5, weight=0, minsize=50)   # 5: ACTION (Fixed options button)
 
 
 # =============================================================================
@@ -137,23 +180,82 @@ theme_mgr = ThemeManager()
 
 
 # =============================================================================
-# Dual Audio Engine (Crossfade Support via PyGame / Dual MCI Channels)
+# Robust Windows Media Player & Dual Audio Engine
 # =============================================================================
 
+class WMPController:
+    """Helper process controller for Windows Media Player (WMPlayer.OCX) via PowerShell stdin."""
+
+    def __init__(self):
+        self.proc = None
+        if sys.platform == "win32":
+            try:
+                self.proc = subprocess.Popen(
+                    ["powershell", "-NoExit", "-Command", "-"],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    bufsize=1
+                )
+                self._send('$wmp = New-Object -ComObject WMPlayer.OCX')
+                self._send('$wmp.settings.autoStart = $true')
+            except Exception as e:
+                print(f"[WMPController] Init failed: {e}")
+                self.proc = None
+
+    def _send(self, cmd: str):
+        if self.proc and self.proc.stdin and not self.proc.poll():
+            try:
+                self.proc.stdin.write(cmd + "\n")
+                self.proc.stdin.flush()
+            except Exception:
+                pass
+
+    def load_and_play(self, file_path: str):
+        abs_p = os.path.abspath(file_path).replace('/', '\\')
+        self._send(f'$wmp.URL = "{abs_p}"')
+        self._send('$wmp.controls.play()')
+
+    def pause(self):
+        self._send('$wmp.controls.pause()')
+
+    def resume(self):
+        self._send('$wmp.controls.play()')
+
+    def stop(self):
+        self._send('$wmp.controls.stop()')
+
+    def set_volume(self, vol_pct: float):
+        v = int(max(0, min(100, vol_pct * 100)))
+        self._send(f'$wmp.settings.volume = {v}')
+
+    def close(self):
+        if self.proc:
+            try:
+                self._send('$wmp.close()')
+                self._send('exit')
+                self.proc.terminate()
+            except Exception:
+                pass
+
+
 class AudioPlayer:
-    """Audio Engine supporting dual track crossfade and WinMM MCI / PyGame volume control."""
+    """Audio Engine supporting dual track crossfade, WMP COM, and WinMM MCI / PyGame volume control."""
 
     def __init__(self):
         self.use_pygame = False
+        self.use_wmp = False
+        self.wmp: Optional[WMPController] = None
         self.current_file: Optional[str] = None
         self.is_playing: bool = False
         self.is_paused: bool = False
         self.volume: float = 0.8
-        self.duration_sec: float = 0.0
+        self.duration_sec: float = 210.0
         self.start_time: float = 0.0
         self.pause_offset: float = 0.0
 
-        # Dual MCI channels for crossfade
+        # Dual MCI channels for fallback crossfade
         self.alias_a = "bgm_master_mci_a"
         self.alias_b = "bgm_master_mci_b"
         self.active_alias = self.alias_a
@@ -170,8 +272,17 @@ class AudioPlayer:
                 self.use_pygame = True
                 print("[AudioEngine] PyGame mixer initialized.")
             except Exception as e:
-                print(f"[AudioEngine] PyGame init failed, using WinMM fallback: {e}")
+                print(f"[AudioEngine] PyGame init failed: {e}")
                 self.use_pygame = False
+
+        if not self.use_pygame and sys.platform == "win32":
+            try:
+                self.wmp = WMPController()
+                if self.wmp.proc is not None:
+                    self.use_wmp = True
+                    print("[AudioEngine] Windows Media Player COM backend initialized.")
+            except Exception as e:
+                print(f"[AudioEngine] WMP COM init failed: {e}")
 
     def _mci_send(self, cmd: str) -> str:
         if sys.platform != "win32":
@@ -181,32 +292,36 @@ class AudioPlayer:
         return buf.value
 
     def load(self, file_path: str):
-        if not os.path.exists(file_path):
+        if not file_path or not os.path.exists(file_path):
             raise FileNotFoundError(f"Audio file not found: {file_path}")
 
         self.stop()
-        self.current_file = file_path
+        self.current_file = os.path.abspath(file_path)
         self.is_playing = False
         self.is_paused = False
         self.pause_offset = 0.0
 
         if self.use_pygame:
             try:
-                pygame.mixer.music.load(file_path)
+                pygame.mixer.music.load(self.current_file)
                 try:
-                    sound = pygame.mixer.Sound(file_path)
+                    sound = pygame.mixer.Sound(self.current_file)
                     self.duration_sec = sound.get_length()
                 except Exception:
                     self.duration_sec = 210.0
                 return
             except Exception as e:
-                print(f"[AudioEngine] PyGame load failed, trying WinMM: {e}")
+                print(f"[AudioEngine] PyGame load failed, trying WMP: {e}")
+
+        if self.use_wmp and self.wmp:
+            self.duration_sec = 210.0
+            return
 
         if sys.platform == "win32":
             self._mci_send(f'close {self.active_alias}')
             short_buf = ctypes.create_unicode_buffer(512)
-            ctypes.windll.kernel32.GetShortPathNameW(file_path, short_buf, 512)
-            path_to_open = short_buf.value if short_buf.value else file_path
+            ctypes.windll.kernel32.GetShortPathNameW(self.current_file, short_buf, 512)
+            path_to_open = short_buf.value if short_buf.value else self.current_file
 
             self._mci_send(f'open "{path_to_open}" type mpegvideo alias {self.active_alias}')
             len_str = self._mci_send(f'status {self.active_alias} length')
@@ -216,12 +331,14 @@ class AudioPlayer:
                 self.duration_sec = 210.0
 
     def play(self):
-        if not self.current_file:
+        if not self.current_file or not os.path.exists(self.current_file):
             return
 
         if self.is_paused:
             if self.use_pygame:
                 pygame.mixer.music.unpause()
+            elif self.use_wmp and self.wmp:
+                self.wmp.resume()
             elif sys.platform == "win32":
                 self._mci_send(f'resume {self.active_alias}')
             self.is_playing = True
@@ -232,6 +349,9 @@ class AudioPlayer:
         if self.use_pygame:
             pygame.mixer.music.play()
             pygame.mixer.music.set_volume(self.volume)
+        elif self.use_wmp and self.wmp:
+            self.wmp.load_and_play(self.current_file)
+            self.wmp.set_volume(self.volume)
         elif sys.platform == "win32":
             self._mci_send(f'play {self.active_alias} from 0')
             self.set_volume(self.volume)
@@ -251,7 +371,11 @@ class AudioPlayer:
 
         next_duration = 210.0
 
-        if sys.platform == "win32" and not self.use_pygame:
+        if self.use_wmp and self.wmp:
+            self.wmp.load_and_play(next_file_path)
+            self.wmp.set_volume(self.volume)
+            self.current_file = next_file_path
+        elif sys.platform == "win32" and not self.use_pygame:
             self._mci_send(f'close {self.standby_alias}')
             short_buf = ctypes.create_unicode_buffer(512)
             ctypes.windll.kernel32.GetShortPathNameW(next_file_path, short_buf, 512)
@@ -260,12 +384,6 @@ class AudioPlayer:
             self._mci_send(f'open "{path_to_open}" type mpegvideo alias {self.standby_alias}')
             self._mci_send(f'setaudio {self.standby_alias} volume to 0')
             self._mci_send(f'play {self.standby_alias} from 0')
-
-            len_str = self._mci_send(f'status {self.standby_alias} length')
-            try:
-                next_duration = float(len_str) / 1000.0 if len_str else 210.0
-            except ValueError:
-                next_duration = 210.0
         elif self.use_pygame:
             try:
                 sound = pygame.mixer.Sound(next_file_path)
@@ -284,15 +402,16 @@ class AudioPlayer:
         elapsed = time.time() - self.crossfade_start_time
         progress = min(1.0, elapsed / max(0.1, self.crossfade_duration))
 
-        vol_active = int((1.0 - progress) * self.volume * 1000)
-        vol_standby = int(progress * self.volume * 1000)
-
-        if sys.platform == "win32" and not self.use_pygame:
+        if self.use_wmp and self.wmp:
+            self.wmp.set_volume(self.volume * progress)
+        elif sys.platform == "win32" and not self.use_pygame:
+            vol_active = int((1.0 - progress) * self.volume * 1000)
+            vol_standby = int(progress * self.volume * 1000)
             self._mci_send(f'setaudio {self.active_alias} volume to {vol_active}')
             self._mci_send(f'setaudio {self.standby_alias} volume to {vol_standby}')
 
         if progress >= 1.0:
-            if sys.platform == "win32" and not self.use_pygame:
+            if sys.platform == "win32" and not self.use_pygame and not self.use_wmp:
                 self._mci_send(f'stop {self.active_alias}')
                 self._mci_send(f'close {self.active_alias}')
                 self.active_alias, self.standby_alias = self.standby_alias, self.active_alias
@@ -304,6 +423,8 @@ class AudioPlayer:
         if self.is_playing and not self.is_paused:
             if self.use_pygame:
                 pygame.mixer.music.pause()
+            elif self.use_wmp and self.wmp:
+                self.wmp.pause()
             elif sys.platform == "win32":
                 self._mci_send(f'pause {self.active_alias}')
             self.is_paused = True
@@ -315,6 +436,8 @@ class AudioPlayer:
                 pygame.mixer.music.stop()
             except Exception:
                 pass
+        elif self.use_wmp and self.wmp:
+            self.wmp.stop()
         elif sys.platform == "win32":
             self._mci_send(f'stop {self.active_alias}')
             self._mci_send(f'stop {self.standby_alias}')
@@ -328,6 +451,8 @@ class AudioPlayer:
         self.volume = max(0.0, min(1.0, volume))
         if self.use_pygame:
             pygame.mixer.music.set_volume(self.volume)
+        elif self.use_wmp and self.wmp:
+            self.wmp.set_volume(self.volume)
         elif sys.platform == "win32":
             vol_int = int(self.volume * 1000)
             self._mci_send(f'setaudio {self.active_alias} volume to {vol_int}')
@@ -344,13 +469,6 @@ class AudioPlayer:
             if pos_ms >= 0:
                 return (pos_ms / 1000.0) + self.pause_offset
 
-        if sys.platform == "win32":
-            pos_str = self._mci_send(f'status {self.active_alias} position')
-            try:
-                return float(pos_str) / 1000.0 if pos_str else (time.time() - self.start_time)
-            except ValueError:
-                pass
-
         return max(0.0, time.time() - self.start_time)
 
     def seek(self, seconds: float):
@@ -359,7 +477,7 @@ class AudioPlayer:
         ms = int(seconds * 1000)
         was_playing = self.is_playing and not self.is_paused
 
-        if sys.platform == "win32":
+        if sys.platform == "win32" and not self.use_wmp:
             self._mci_send(f'seek {self.active_alias} to {ms}')
             if was_playing:
                 self._mci_send(f'play {self.active_alias}')
@@ -449,8 +567,8 @@ class PlaylistManager:
         else:
             # Starter playlists
             self.playlists = [
-                {"id": "pl_workout", "name": "Workout", "song_ids": [], "pinned": True},
-                {"id": "pl_favorites", "name": "Favorites", "song_ids": [], "pinned": True}
+                {"id": "pl_favorites", "name": "Favorites", "song_ids": [], "pinned": True},
+                {"id": "pl_workout", "name": "Workout", "song_ids": [], "pinned": True}
             ]
             self.save()
 
@@ -693,6 +811,14 @@ class MusicLibraryManager:
     def get_songs_by_mood(self, mood: str) -> List[Dict[str, Any]]:
         return [s for s in self.songs if s.get("mood", "").lower() == mood.lower()]
 
+    def get_related_mood_songs(self, mood: str) -> List[Dict[str, Any]]:
+        related = RELATED_MOODS.get(mood, [])
+        results = []
+        for r_mood in related:
+            results.extend(self.get_songs_by_mood(r_mood))
+        return results
+
+
 
 # =============================================================================
 # CustomTkinter Dialogs & Modals
@@ -811,7 +937,7 @@ class AddSongsModal:
 
                 chk = ctk.CTkCheckBox(
                     scroll,
-                    text=f"{s['title']} — {s['artist']} ({s['mood']})",
+                    text=f"{truncate_text(s['title'], 25)} — {truncate_text(s['artist'], 20)} ({s['mood']})",
                     variable=var,
                     onvalue="on",
                     offvalue="off"
@@ -1379,7 +1505,7 @@ class FaceRegistrationModal:
 # =============================================================================
 
 class BGMMasterApp(ctk.CTk):
-    """Main CustomTkinter Desktop Application for BGM MASTER with Functional Moodify AI Toggle in Right Panel."""
+    """Main CustomTkinter Desktop Application for BGM MASTER with Shared 6-Column Grid Music Library."""
 
     INITIAL_ANALYSIS_SECONDS = 10.0
     FRAME_SKIP = 2  # Throttles camera landmark detection to every 2nd frame for low CPU usage
@@ -1415,6 +1541,13 @@ class BGMMasterApp(ctk.CTk):
         self.current_song_idx: int = -1
         self.selected_song_id: Optional[str] = None
 
+        # Anti-Repeat Recent Track History (Stores last 5 played song IDs)
+        self.recent_ai_song_ids: List[str] = []
+
+        # Live Expression Visualization References
+        self.expression_bars: Dict[str, ctk.CTkProgressBar] = {}
+        self.expression_labels: Dict[str, ctk.CTkLabel] = {}
+
         # Moodify AI Queue State
         self.ai_state: str = "IDLE"
         self.ai_analysis_start_time: float = 0.0
@@ -1432,11 +1565,12 @@ class BGMMasterApp(ctk.CTk):
         self.protocol("WM_DELETE_WINDOW", self._on_quit)
 
     def _build_ui(self):
-        # Grid Configuration (Row 0 for Sidebar & Content, Row 1 for Player Bar)
+        # Grid Configuration (Row 0: Sidebar + Content + Permanent Right Panel, Row 1: Player Bar)
         self.grid_rowconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=0)
-        self.grid_columnconfigure(0, weight=0)
-        self.grid_columnconfigure(1, weight=1)
+        self.grid_columnconfigure(0, weight=0)  # Sidebar (width 240)
+        self.grid_columnconfigure(1, weight=1)  # Center Content (Excel-Like Music Library)
+        self.grid_columnconfigure(2, weight=0)  # Permanent Right AI Panel (width 280)
 
         # -------------------------------------------------------------
         # 1. PERMANENT SIDEBAR (Row 0, Column 0)
@@ -1482,25 +1616,30 @@ class BGMMasterApp(ctk.CTk):
         btn_add_folder = ctk.CTkButton(lib_box, text="📁 + Add Folder", anchor="w", fg_color="transparent", text_color="#10B981", hover_color=("gray70", "gray30"), command=self._on_import_folder)
         btn_add_folder.pack(fill="x", padx=4, pady=2)
 
-        # MIDDLE SCROLLABLE FRAME (MOODS & USER PLAYLISTS with Visible Scrollbar!)
+        # MIDDLE SCROLLABLE FRAME (MOODS, CUSTOM MOODS & USER PLAYLISTS with Visible Scrollbar!)
         self.sidebar_scroll_frame = ctk.CTkScrollableFrame(self.sidebar_frame, corner_radius=8, fg_color="transparent")
         self.sidebar_scroll_frame.grid(row=3, column=0, padx=12, pady=(0, 10), sticky="nsew")
 
-        # MOODS Section inside scrollable area
-        ctk.CTkLabel(self.sidebar_scroll_frame, text="MOOD PLAYLISTS", font=ctk.CTkFont(size=10, weight="bold"), text_color="#A1A1AA").pack(anchor="w", padx=4, pady=(4, 2))
+        # 1. MOODS Section inside scrollable area (Fixed Immutable Default Mood Order!)
+        ctk.CTkLabel(self.sidebar_scroll_frame, text="MOODS", font=ctk.CTkFont(size=10, weight="bold"), text_color="#A1A1AA").pack(anchor="w", padx=4, pady=(4, 2))
 
         self.mood_buttons_container = ctk.CTkFrame(self.sidebar_scroll_frame, fg_color="transparent")
         self.mood_buttons_container.pack(fill="x", pady=2)
-        self._build_mood_buttons()
+
+        # 2. CUSTOM MOODS Section
+        ctk.CTkLabel(self.sidebar_scroll_frame, text="CUSTOM MOODS", font=ctk.CTkFont(size=10, weight="bold"), text_color="#A1A1AA").pack(anchor="w", padx=4, pady=(8, 2))
+
+        self.custom_mood_container = ctk.CTkFrame(self.sidebar_scroll_frame, fg_color="transparent")
+        self.custom_mood_container.pack(fill="x", pady=2)
 
         btn_add_mood = ctk.CTkButton(self.sidebar_scroll_frame, text="+ Add New Mood", font=ctk.CTkFont(size=10, weight="bold"), fg_color="#374151", hover_color="#4B5563", command=self._on_add_custom_mood)
         btn_add_mood.pack(fill="x", pady=(4, 12))
 
-        # USER PLAYLISTS Section inside scrollable area
+        # 3. PLAYLISTS Section
         header_row = ctk.CTkFrame(self.sidebar_scroll_frame, fg_color="transparent")
         header_row.pack(fill="x", pady=(4, 2))
 
-        ctk.CTkLabel(header_row, text="USER PLAYLISTS", font=ctk.CTkFont(size=10, weight="bold"), text_color="#A1A1AA").pack(side="left")
+        ctk.CTkLabel(header_row, text="PLAYLISTS", font=ctk.CTkFont(size=10, weight="bold"), text_color="#A1A1AA").pack(side="left")
 
         btn_plus_pl = ctk.CTkButton(
             header_row,
@@ -1517,6 +1656,7 @@ class BGMMasterApp(ctk.CTk):
         self.custom_playlists_scroll = ctk.CTkFrame(self.sidebar_scroll_frame, fg_color="transparent")
         self.custom_playlists_scroll.pack(fill="x", pady=2)
 
+        self._build_mood_buttons()
         self._build_custom_playlist_buttons()
 
         # Settings Nav Button (Fixed Bottom)
@@ -1527,15 +1667,24 @@ class BGMMasterApp(ctk.CTk):
         # 2. CENTER CONTENT CONTAINER (Row 0, Column 1)
         # -------------------------------------------------------------
         self.content_container = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
-        self.content_container.grid(row=0, column=1, sticky="nsew", padx=(5, 10), pady=10)
+        self.content_container.grid(row=0, column=1, sticky="nsew", padx=5, pady=10)
         self.content_container.grid_columnconfigure(0, weight=1)
         self.content_container.grid_rowconfigure(0, weight=1)
 
         # -------------------------------------------------------------
-        # 3. FIXED BOTTOM PLAYER BAR (Row 1, Columns 0-1, Height 80px)
+        # 3. PERMANENT RIGHT AI PANEL (Row 0, Column 2 - Persistent Window-Level Column!)
+        # -------------------------------------------------------------
+        self.right_ai_panel = ctk.CTkFrame(self, width=280, corner_radius=10)
+        self.right_ai_panel.grid(row=0, column=2, sticky="nsew", padx=(5, 10), pady=10)
+        self.right_ai_panel.grid_propagate(False)
+
+        self._build_permanent_right_ai_panel()
+
+        # -------------------------------------------------------------
+        # 4. FIXED BOTTOM PLAYER BAR (Row 1, Columns 0-2, Height 80px)
         # -------------------------------------------------------------
         player_bar = ctk.CTkFrame(self, height=80, corner_radius=10)
-        player_bar.grid(row=1, column=0, columnspan=2, sticky="ew", padx=10, pady=(0, 10))
+        player_bar.grid(row=1, column=0, columnspan=3, sticky="ew", padx=10, pady=(0, 10))
 
         # Track Info Row
         info_row = ctk.CTkFrame(player_bar, fg_color="transparent")
@@ -1584,7 +1733,165 @@ class BGMMasterApp(ctk.CTk):
         self.slider_vol.set(80)
 
     # -------------------------------------------------------------------------
-    # PAGE NAVIGATION VIEWS (Home with Pinned Playlist Cards, Playlist, Settings)
+    # PERMANENT RIGHT AI PANEL & LIVE EXPRESSION VISUALIZATION
+    # -------------------------------------------------------------------------
+
+    def _build_permanent_right_ai_panel(self):
+        """Constructs the permanent Right AI Panel once during app startup."""
+        cam_card = ctk.CTkFrame(self.right_ai_panel, height=190, corner_radius=10)
+        cam_card.pack(fill="x", padx=8, pady=(8, 4))
+        cam_card.pack_propagate(False)
+
+        ctk.CTkLabel(cam_card, text="CAMERA PREVIEW", font=ctk.CTkFont(size=10, weight="bold")).pack(anchor="w", padx=10, pady=(6, 2))
+
+        self.cam_canvas = ctk.CTkLabel(
+            cam_card,
+            text="Camera OFF\n(Moodify Disabled)",
+            font=ctk.CTkFont(size=10),
+            text_color="#A1A1AA"
+        )
+        self.cam_canvas.pack(fill="both", expand=True, padx=6, pady=(0, 6))
+
+        ai_switch_box = ctk.CTkFrame(self.right_ai_panel, corner_radius=8)
+        ai_switch_box.pack(fill="x", padx=8, pady=4)
+
+        ctk.CTkLabel(ai_switch_box, text="MOODIFY AI ENGINE", font=ctk.CTkFont(size=10, weight="bold"), text_color="#A1A1AA").pack(anchor="w", padx=8, pady=(6, 2))
+
+        self.switch_moodify_var = ctk.StringVar(value="on" if self.moodify_on else "off")
+        self.switch_moodify = ctk.CTkSwitch(
+            ai_switch_box,
+            text="MOODIFY [ ON ]" if self.moodify_on else "MOODIFY [ OFF ]",
+            font=ctk.CTkFont(weight="bold"),
+            variable=self.switch_moodify_var,
+            onvalue="on",
+            offvalue="off",
+            command=self._on_toggle_moodify
+        )
+        self.switch_moodify.pack(anchor="w", padx=8, pady=(0, 6))
+
+        badge = ctk.CTkFrame(self.right_ai_panel, corner_radius=8)
+        badge.pack(fill="x", padx=8, pady=4)
+
+        initial_status_text = "AI Status: Moodify OFF" if not self.moodify_on else f"CURRENT MOOD: {MOOD_EMOJIS.get(self.stable_mood, '😊')} {self.stable_mood} ({int(self.ai_confidence)}%)"
+        initial_status_col = "#3B82F6" if not self.moodify_on else "#10B981"
+
+        self.lbl_det_mood = ctk.CTkLabel(
+            badge,
+            text=initial_status_text,
+            font=ctk.CTkFont(size=10, weight="bold"),
+            text_color=initial_status_col,
+            anchor="w"
+        )
+        self.lbl_det_mood.pack(fill="x", padx=8, pady=4)
+
+        self.lbl_det_playlist = ctk.CTkLabel(
+            badge,
+            text=f"PLAYING FROM: {self.stable_mood if self.moodify_on else 'All Music'} Playlist",
+            font=ctk.CTkFont(size=10, weight="bold"),
+            text_color="#10B981",
+            anchor="w"
+        )
+        self.lbl_det_playlist.pack(fill="x", padx=8, pady=(0, 4))
+
+        exp_card = ctk.CTkFrame(self.right_ai_panel, corner_radius=8)
+        exp_card.pack(fill="x", padx=8, pady=(4, 4))
+
+        ctk.CTkLabel(exp_card, text="EXPRESSION LEVELS", font=ctk.CTkFont(size=10, weight="bold"), text_color="#A1A1AA").pack(anchor="w", padx=8, pady=(6, 2))
+
+        display_emotions = [
+            ("Happy", "HAPPY", "#10B981"),
+            ("Sad", "SAD", "#3B82F6"),
+            ("Neutral", "NEUTRAL", "#9CA3AF"),
+            ("Surprised", "SURPRISED", "#F59E0B"),
+            ("Excited", "ANGRY", "#EC4899"),
+        ]
+
+        for disp_name, emo_key, color in display_emotions:
+            row = ctk.CTkFrame(exp_card, fg_color="transparent")
+            row.pack(fill="x", padx=8, pady=2)
+
+            lbl_name = ctk.CTkLabel(row, text=disp_name, font=ctk.CTkFont(size=9, weight="bold"), width=60, anchor="w")
+            lbl_name.pack(side="left")
+
+            pbar = ctk.CTkProgressBar(row, height=8, progress_color=color)
+            pbar.pack(side="left", fill="x", expand=True, padx=6)
+            pbar.set(0.1)
+
+            lbl_pct = ctk.CTkLabel(row, text="10%", font=ctk.CTkFont(size=9), width=35, anchor="e", text_color="#A1A1AA")
+            lbl_pct.pack(side="right")
+
+            self.expression_bars[emo_key] = pbar
+            self.expression_labels[emo_key] = lbl_pct
+
+        # Hackathon Demo / Debug Mood Simulation Panel
+        demo_card = ctk.CTkFrame(self.right_ai_panel, corner_radius=8)
+        demo_card.pack(fill="x", padx=8, pady=(4, 8))
+
+        ctk.CTkLabel(demo_card, text="HACKATHON MOOD TEST", font=ctk.CTkFont(size=9, weight="bold"), text_color="#A1A1AA").pack(anchor="w", padx=8, pady=(6, 2))
+
+        grid_frame = ctk.CTkFrame(demo_card, fg_color="transparent")
+        grid_frame.pack(fill="x", padx=4, pady=(0, 6))
+
+        test_moods = [
+            ("😊 Happy", "Happy"),
+            ("😢 Sad", "Sad"),
+            ("⚡ Excited", "Excited"),
+            ("🛋️ Chill", "Chill"),
+            ("🥀 Lonely", "Lonely"),
+            ("💖 Romantic", "Romantic"),
+        ]
+
+        for idx, (label, mood_key) in enumerate(test_moods):
+            r, c = divmod(idx, 3)
+            btn = ctk.CTkButton(
+                grid_frame,
+                text=label,
+                font=ctk.CTkFont(size=9, weight="bold"),
+                height=24,
+                fg_color="#374151",
+                hover_color="#4B5563",
+                command=lambda mk=mood_key: self._on_mock_emotion_click(mk)
+            )
+            btn.grid(row=r, column=c, padx=2, pady=2, sticky="ew")
+            grid_frame.columnconfigure(c, weight=1)
+
+
+    # -------------------------------------------------------------------------
+    # SHARED 6-COLUMN GRID TABLE HEADER BUILDER
+    # -------------------------------------------------------------------------
+
+    def _build_shared_table_header(self, parent_container: ctk.CTkFrame):
+        """Constructs a fixed table header sharing identical column grid configurations (0..5) with song rows."""
+        table_header = ctk.CTkFrame(parent_container, corner_radius=6, height=32)
+        table_header.pack(fill="x", pady=(0, 4))
+        configure_music_table_columns(table_header)
+
+        # Col 0: Artwork Header (64px)
+        lbl_hdr_art = ctk.CTkLabel(table_header, text="[ COVER ]", font=ctk.CTkFont(size=9, weight="bold"), text_color="#A1A1AA")
+        lbl_hdr_art.grid(row=0, column=0, sticky="w", padx=(10, 4), pady=6)
+
+        # Col 1: Title Header (Flexible 38%)
+        lbl_hdr_t = ctk.CTkLabel(table_header, text="TITLE", font=ctk.CTkFont(size=10, weight="bold"), text_color="#A1A1AA", anchor="w")
+        lbl_hdr_t.grid(row=0, column=1, sticky="ew", padx=4, pady=6)
+
+        # Col 2: Artist Header (Flexible 27% - Ample Space!)
+        lbl_hdr_a = ctk.CTkLabel(table_header, text="ARTIST", font=ctk.CTkFont(size=10, weight="bold"), text_color="#A1A1AA", anchor="w")
+        lbl_hdr_a.grid(row=0, column=2, sticky="ew", padx=4, pady=6)
+
+        # Col 3: Mood Header (Controlled 13%)
+        lbl_hdr_m = ctk.CTkLabel(table_header, text="MOOD", font=ctk.CTkFont(size=10, weight="bold"), text_color="#A1A1AA", anchor="w")
+        lbl_hdr_m.grid(row=0, column=3, sticky="ew", padx=4, pady=6)
+
+        # Col 4: Time Header (Controlled 8%)
+        lbl_hdr_d = ctk.CTkLabel(table_header, text="TIME", font=ctk.CTkFont(size=10, weight="bold"), text_color="#A1A1AA", anchor="e")
+        lbl_hdr_d.grid(row=0, column=4, sticky="ew", padx=4, pady=6)
+
+        # Col 5: Action Header (Fixed 50px)
+        lbl_hdr_act = ctk.CTkLabel(table_header, text="⋯", font=ctk.CTkFont(size=10, weight="bold"), text_color="#A1A1AA", anchor="center")
+        lbl_hdr_act.grid(row=0, column=5, sticky="ew", padx=(4, 10), pady=6)
+
+    # -------------------------------------------------------------------------
+    # PAGE NAVIGATION VIEWS (Modifies ONLY self.content_container!)
     # -------------------------------------------------------------------------
 
     def _show_home_view(self):
@@ -1592,19 +1899,8 @@ class BGMMasterApp(ctk.CTk):
         for w in self.content_container.winfo_children():
             w.destroy()
 
-        main_split = ctk.CTkFrame(self.content_container, fg_color="transparent")
-        main_split.pack(fill="both", expand=True)
-        main_split.columnconfigure(0, weight=1)
-        main_split.rowconfigure(0, weight=1)
-
-        center_area = ctk.CTkFrame(main_split, fg_color="transparent")
-        center_area.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
-
-        right_area = ctk.CTkFrame(main_split, width=280, corner_radius=10)
-        right_area.grid(row=0, column=1, sticky="nsew")
-        right_area.grid_propagate(False)
-
-        self._build_right_ai_panel(right_area)
+        center_area = ctk.CTkFrame(self.content_container, fg_color="transparent")
+        center_area.pack(fill="both", expand=True)
 
         header = ctk.CTkFrame(center_area, fg_color="transparent")
         header.pack(fill="x", pady=(0, 10))
@@ -1630,7 +1926,7 @@ class BGMMasterApp(ctk.CTk):
                 cnt = len(pl.get("song_ids", []))
                 btn_pl_card = ctk.CTkButton(
                     card,
-                    text=f"🎵  {pl['name']}\n{cnt} song{'s' if cnt != 1 else ''}",
+                    text=f"🎵  {truncate_text(pl['name'], 18)}\n{cnt} song{'s' if cnt != 1 else ''}",
                     font=ctk.CTkFont(size=11, weight="bold"),
                     anchor="w",
                     fg_color="transparent",
@@ -1665,8 +1961,10 @@ class BGMMasterApp(ctk.CTk):
             )
             btn.pack(fill="both", expand=True, padx=8, pady=8)
 
-        # Recently Imported Music Table
+        # Recently Imported Music Table Header & Scrollable List
         ctk.CTkLabel(center_area, text="RECENTLY IMPORTED MUSIC", font=ctk.CTkFont(size=12, weight="bold"), text_color="#A1A1AA").pack(anchor="w", pady=(5, 6))
+        self._build_shared_table_header(center_area)
+
         self.scroll_music_table = ctk.CTkScrollableFrame(center_area, corner_radius=10)
         self.scroll_music_table.pack(fill="both", expand=True)
         self._refresh_library_table()
@@ -1679,19 +1977,8 @@ class BGMMasterApp(ctk.CTk):
         for w in self.content_container.winfo_children():
             w.destroy()
 
-        main_split = ctk.CTkFrame(self.content_container, fg_color="transparent")
-        main_split.pack(fill="both", expand=True)
-        main_split.columnconfigure(0, weight=1)
-        main_split.rowconfigure(0, weight=1)
-
-        center_area = ctk.CTkFrame(main_split, fg_color="transparent")
-        center_area.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
-
-        right_area = ctk.CTkFrame(main_split, width=280, corner_radius=10)
-        right_area.grid(row=0, column=1, sticky="nsew")
-        right_area.grid_propagate(False)
-
-        self._build_right_ai_panel(right_area)
+        center_area = ctk.CTkFrame(self.content_container, fg_color="transparent")
+        center_area.pack(fill="both", expand=True)
 
         # Header Row with ← Back Button
         title_bar = ctk.CTkFrame(center_area, fg_color="transparent")
@@ -1736,14 +2023,8 @@ class BGMMasterApp(ctk.CTk):
         )
         entry_search.pack(side="right")
 
-        table_header = ctk.CTkFrame(center_area, corner_radius=6, height=28)
-        table_header.pack(fill="x", pady=(0, 4))
-
-        ctk.CTkLabel(table_header, text="TITLE", font=ctk.CTkFont(size=10, weight="bold"), text_color="#A1A1AA", anchor="w", width=220).pack(side="left", padx=(12, 4))
-        ctk.CTkLabel(table_header, text="ARTIST", font=ctk.CTkFont(size=10, weight="bold"), text_color="#A1A1AA", anchor="w", width=150).pack(side="left", padx=4)
-        ctk.CTkLabel(table_header, text="ALBUM", font=ctk.CTkFont(size=10, weight="bold"), text_color="#A1A1AA", anchor="w", width=130).pack(side="left", padx=4)
-        ctk.CTkLabel(table_header, text="MOOD", font=ctk.CTkFont(size=10, weight="bold"), text_color="#A1A1AA", anchor="w", width=90).pack(side="left", padx=4)
-        ctk.CTkLabel(table_header, text="TIME", font=ctk.CTkFont(size=10, weight="bold"), text_color="#A1A1AA", anchor="e").pack(side="right", padx=12)
+        # Shared 6-Column Fixed Header
+        self._build_shared_table_header(center_area)
 
         self.scroll_music_table = ctk.CTkScrollableFrame(center_area, corner_radius=10)
         self.scroll_music_table.pack(fill="both", expand=True)
@@ -1760,19 +2041,8 @@ class BGMMasterApp(ctk.CTk):
         for w in self.content_container.winfo_children():
             w.destroy()
 
-        main_split = ctk.CTkFrame(self.content_container, fg_color="transparent")
-        main_split.pack(fill="both", expand=True)
-        main_split.columnconfigure(0, weight=1)
-        main_split.rowconfigure(0, weight=1)
-
-        center_area = ctk.CTkFrame(main_split, fg_color="transparent")
-        center_area.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
-
-        right_area = ctk.CTkFrame(main_split, width=280, corner_radius=10)
-        right_area.grid(row=0, column=1, sticky="nsew")
-        right_area.grid_propagate(False)
-
-        self._build_right_ai_panel(right_area)
+        center_area = ctk.CTkFrame(self.content_container, fg_color="transparent")
+        center_area.pack(fill="both", expand=True)
 
         # Custom Playlist Header
         title_bar = ctk.CTkFrame(center_area, fg_color="transparent")
@@ -1828,14 +2098,8 @@ class BGMMasterApp(ctk.CTk):
         )
         entry_search.pack(side="right")
 
-        table_header = ctk.CTkFrame(center_area, corner_radius=6, height=28)
-        table_header.pack(fill="x", pady=(0, 4))
-
-        ctk.CTkLabel(table_header, text="TITLE", font=ctk.CTkFont(size=10, weight="bold"), text_color="#A1A1AA", anchor="w", width=220).pack(side="left", padx=(12, 4))
-        ctk.CTkLabel(table_header, text="ARTIST", font=ctk.CTkFont(size=10, weight="bold"), text_color="#A1A1AA", anchor="w", width=150).pack(side="left", padx=4)
-        ctk.CTkLabel(table_header, text="ALBUM", font=ctk.CTkFont(size=10, weight="bold"), text_color="#A1A1AA", anchor="w", width=130).pack(side="left", padx=4)
-        ctk.CTkLabel(table_header, text="MOOD", font=ctk.CTkFont(size=10, weight="bold"), text_color="#A1A1AA", anchor="w", width=90).pack(side="left", padx=4)
-        ctk.CTkLabel(table_header, text="TIME", font=ctk.CTkFont(size=10, weight="bold"), text_color="#A1A1AA", anchor="e").pack(side="right", padx=12)
+        # Shared 6-Column Fixed Header
+        self._build_shared_table_header(center_area)
 
         self.scroll_music_table = ctk.CTkScrollableFrame(center_area, corner_radius=10)
         self.scroll_music_table.pack(fill="both", expand=True)
@@ -1849,18 +2113,8 @@ class BGMMasterApp(ctk.CTk):
         for w in self.content_container.winfo_children():
             w.destroy()
 
-        main_split = ctk.CTkFrame(self.content_container, fg_color="transparent")
-        main_split.pack(fill="both", expand=True)
-        main_split.columnconfigure(0, weight=1)
-
-        center_area = ctk.CTkFrame(main_split, fg_color="transparent")
-        center_area.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
-
-        right_area = ctk.CTkFrame(main_split, width=280, corner_radius=10)
-        right_area.grid(row=0, column=1, sticky="nsew")
-        right_area.grid_propagate(False)
-
-        self._build_right_ai_panel(right_area)
+        center_area = ctk.CTkFrame(self.content_container, fg_color="transparent")
+        center_area.pack(fill="both", expand=True)
 
         header = ctk.CTkFrame(center_area, fg_color="transparent")
         header.pack(fill="x", pady=(0, 15))
@@ -1894,106 +2148,80 @@ class BGMMasterApp(ctk.CTk):
             self._show_settings_view()
 
     # -------------------------------------------------------------------------
-    # RIGHT AI PANEL (Camera Preview & Functional Moodify AI Toggle!)
+    # SIDEBAR BUILDERS (STRICT IMMUTABLE SECTION ORDER)
     # -------------------------------------------------------------------------
 
-    def _build_right_ai_panel(self, parent_frame):
-        cam_card = ctk.CTkFrame(parent_frame, corner_radius=10)
-        cam_card.pack(fill="both", expand=True, padx=8, pady=8)
-
-        ctk.CTkLabel(cam_card, text="AI MOOD PANEL", font=ctk.CTkFont(size=11, weight="bold")).pack(anchor="w", padx=10, pady=(10, 6))
-
-        # Live Camera Preview Window
-        self.cam_canvas = ctk.CTkLabel(
-            cam_card,
-            text="Camera OFF\n(Moodify is Disabled)",
-            font=ctk.CTkFont(size=11),
-            text_color="#A1A1AA"
-        )
-        self.cam_canvas.pack(fill="both", expand=True, padx=6, pady=(0, 8))
-
-        # FUNCTIONAL MOODIFY AI SWITCH IN RIGHT PANEL DIRECTLY BELOW CAMERA!
-        ai_switch_box = ctk.CTkFrame(cam_card, corner_radius=8)
-        ai_switch_box.pack(fill="x", padx=6, pady=(0, 6))
-
-        ctk.CTkLabel(ai_switch_box, text="MOODIFY AI ENGINE", font=ctk.CTkFont(size=10, weight="bold"), text_color="#A1A1AA").pack(anchor="w", padx=8, pady=(6, 2))
-
-        self.switch_moodify_var = ctk.StringVar(value="on" if self.moodify_on else "off")
-        self.switch_moodify = ctk.CTkSwitch(
-            ai_switch_box,
-            text="MOODIFY [ ON ]" if self.moodify_on else "MOODIFY [ OFF ]",
-            font=ctk.CTkFont(weight="bold"),
-            variable=self.switch_moodify_var,
-            onvalue="on",
-            offvalue="off",
-            command=self._on_toggle_moodify
-        )
-        self.switch_moodify.pack(anchor="w", padx=8, pady=(0, 6))
-
-        badge = ctk.CTkFrame(cam_card, corner_radius=8)
-        badge.pack(fill="x", padx=6, pady=6)
-
-        initial_status_text = "AI Status: Moodify OFF" if not self.moodify_on else f"CURRENT MOOD: {MOOD_EMOJIS.get(self.stable_mood, '😊')} {self.stable_mood} ({int(self.ai_confidence)}%)"
-        initial_status_col = "#3B82F6" if not self.moodify_on else "#10B981"
-
-        self.lbl_det_mood = ctk.CTkLabel(
-            badge,
-            text=initial_status_text,
-            font=ctk.CTkFont(size=10, weight="bold"),
-            text_color=initial_status_col,
-            anchor="w"
-        )
-        self.lbl_det_mood.pack(fill="x", padx=8, pady=4)
-
-        self.lbl_det_playlist = ctk.CTkLabel(
-            badge,
-            text=f"PLAYING FROM: {self.stable_mood if self.moodify_on else 'All Music'} Playlist",
-            font=ctk.CTkFont(size=10, weight="bold"),
-            text_color="#10B981",
-            anchor="w"
-        )
-        self.lbl_det_playlist.pack(fill="x", padx=8, pady=(0, 4))
-
     def _build_mood_buttons(self):
-        """Builds mood list. Default moods are preserved; custom moods get a subtle '-' delete button."""
-        for widget in self.mood_buttons_container.winfo_children():
-            widget.destroy()
+        """Builds mood list with FIXED IMMUTABLE DEFAULT MOOD ORDER, followed by CUSTOM MOODS."""
+        if hasattr(self, "mood_buttons_container"):
+            for widget in self.mood_buttons_container.winfo_children():
+                widget.destroy()
 
-        for mood in self.mood_mgr.moods:
-            emoji = MOOD_EMOJIS.get(mood, "🎧")
-            is_active = (self.active_view == "playlist" and self.active_playlist_mood == mood)
-            fg_col = "#0284C7" if is_active else "transparent"
-            txt_col = "#FFFFFF" if is_active else ("gray10", "gray90")
+            # Render DEFAULT MOODS strictly in order: Romantic, Happy, Sad, Lonely, Chill, Excited
+            for mood in DEFAULT_MOODS:
+                emoji = MOOD_EMOJIS.get(mood, "🎧")
+                is_active = (self.active_view == "playlist" and self.active_playlist_mood == mood)
+                fg_col = "#0284C7" if is_active else "transparent"
+                txt_col = "#FFFFFF" if is_active else ("gray10", "gray90")
 
-            row_frame = ctk.CTkFrame(self.mood_buttons_container, corner_radius=6, fg_color=fg_col)
-            row_frame.pack(fill="x", pady=2)
+                row_frame = ctk.CTkFrame(self.mood_buttons_container, corner_radius=6, fg_color=fg_col)
+                row_frame.pack(fill="x", pady=2)
 
-            btn_mood = ctk.CTkButton(
-                row_frame,
-                text=f" {emoji}  {mood}",
-                font=ctk.CTkFont(size=11, weight="bold" if is_active else "normal"),
-                anchor="w",
-                fg_color="transparent",
-                text_color=txt_col,
-                hover_color=("gray70", "gray30"),
-                command=lambda m=mood: self._select_playlist(m)
-            )
-            btn_mood.pack(side="left", fill="x", expand=True)
-
-            # Subtle '-' delete button ONLY for custom moods (Default moods CANNOT be deleted!)
-            if mood not in DEFAULT_MOODS:
-                btn_del_mood = ctk.CTkButton(
+                btn_mood = ctk.CTkButton(
                     row_frame,
-                    text="-",
-                    font=ctk.CTkFont(size=14, weight="bold"),
-                    width=22,
-                    height=20,
+                    text=f" {emoji}  {mood}",
+                    font=ctk.CTkFont(size=11, weight="bold" if is_active else "normal"),
+                    anchor="w",
                     fg_color="transparent",
-                    text_color="#EF4444",
-                    hover_color="#DC2626",
-                    command=lambda m=mood: self._on_delete_custom_mood_click(m)
+                    text_color=txt_col,
+                    hover_color=("gray70", "gray30"),
+                    command=lambda m=mood: self._select_playlist(m)
                 )
-                btn_del_mood.pack(side="right", padx=4)
+                btn_mood.pack(side="left", fill="x", expand=True)
+
+        if hasattr(self, "custom_mood_container"):
+            for widget in self.custom_mood_container.winfo_children():
+                widget.destroy()
+
+            # Render CUSTOM MOODS (if any) with subtle '-' delete button
+            custom_moods = [m for m in self.mood_mgr.moods if m not in DEFAULT_MOODS]
+            if not custom_moods:
+                lbl_none = ctk.CTkLabel(self.custom_mood_container, text="No custom moods", font=ctk.CTkFont(size=10), text_color="#A1A1AA")
+                lbl_none.pack(anchor="w", padx=6, pady=2)
+            else:
+                for mood in custom_moods:
+                    emoji = MOOD_EMOJIS.get(mood, "🎧")
+                    is_active = (self.active_view == "playlist" and self.active_playlist_mood == mood)
+                    fg_col = "#0284C7" if is_active else "transparent"
+                    txt_col = "#FFFFFF" if is_active else ("gray10", "gray90")
+
+                    row_frame = ctk.CTkFrame(self.custom_mood_container, corner_radius=6, fg_color=fg_col)
+                    row_frame.pack(fill="x", pady=2)
+
+                    btn_mood = ctk.CTkButton(
+                        row_frame,
+                        text=f" {emoji}  {mood}",
+                        font=ctk.CTkFont(size=11, weight="bold" if is_active else "normal"),
+                        anchor="w",
+                        fg_color="transparent",
+                        text_color=txt_col,
+                        hover_color=("gray70", "gray30"),
+                        command=lambda m=mood: self._select_playlist(m)
+                    )
+                    btn_mood.pack(side="left", fill="x", expand=True)
+
+                    btn_del_mood = ctk.CTkButton(
+                        row_frame,
+                        text="-",
+                        font=ctk.CTkFont(size=14, weight="bold"),
+                        width=22,
+                        height=20,
+                        fg_color="transparent",
+                        text_color="#EF4444",
+                        hover_color="#DC2626",
+                        command=lambda m=mood: self._on_delete_custom_mood_click(m)
+                    )
+                    btn_del_mood.pack(side="right", padx=4)
 
     def _on_delete_custom_mood_click(self, mood: str):
         if messagebox.askyesno("Confirm Mood Deletion", f"Delete '{mood}' custom mood?\n\nNOTE: Songs with this mood tag will default back to 'Chill'. Physical audio files will NOT be deleted."):
@@ -2012,6 +2240,9 @@ class BGMMasterApp(ctk.CTk):
 
     def _build_custom_playlist_buttons(self):
         """Populates custom playlist rows inside the scrollable sidebar container."""
+        if not hasattr(self, "custom_playlists_scroll"):
+            return
+
         for widget in self.custom_playlists_scroll.winfo_children():
             widget.destroy()
 
@@ -2027,7 +2258,7 @@ class BGMMasterApp(ctk.CTk):
 
             btn_pl = ctk.CTkButton(
                 row_frame,
-                text=f"{pin_indicator}{pl['name']}",
+                text=f"{pin_indicator}{truncate_text(pl['name'], 20)}",
                 font=ctk.CTkFont(size=11, weight="bold" if is_selected else "normal"),
                 anchor="w",
                 fg_color="transparent",
@@ -2170,7 +2401,12 @@ class BGMMasterApp(ctk.CTk):
             self._build_mood_buttons()
             self._refresh_library_table()
 
+    # -------------------------------------------------------------------------
+    # EXCEL-LIKE SPREADSHEET MUSIC TABLE ROW RENDERER (6 SHARED GRID COLUMNS)
+    # -------------------------------------------------------------------------
+
     def _refresh_library_table(self):
+        """Renders music library table with strict shared 6-column grid boundaries (0..5)."""
         if not hasattr(self, "scroll_music_table"):
             return
 
@@ -2208,49 +2444,151 @@ class BGMMasterApp(ctk.CTk):
             if not search_query or search_query in t_title or search_query in t_artist or search_query in t_album or search_query in t_mood:
                 self.playlist.append(s)
 
-                row = ctk.CTkFrame(self.scroll_music_table, corner_radius=6)
+                is_selected = (hasattr(self, "selected_song_id") and self.selected_song_id == s["id"])
+                is_currently_playing = (self.current_song and self.current_song.get("id") == s["id"])
+
+                if is_currently_playing:
+                    row_fg = "#1F2937"
+                elif is_selected:
+                    row_fg = "#374151"
+                else:
+                    row_fg = "transparent"
+
+                row = ctk.CTkFrame(self.scroll_music_table, corner_radius=6, height=52, fg_color=row_fg)
                 row.pack(fill="x", pady=2, padx=4)
+                row.grid_propagate(False)
 
-                lbl_icon = ctk.CTkLabel(row, text="🎵", font=ctk.CTkFont(size=14))
-                lbl_icon.pack(side="left", padx=(10, 8), pady=8)
+                # Configure identical 6-column grid structure (0..5)
+                configure_music_table_columns(row)
 
-                lbl_t = ctk.CTkLabel(row, text=s["title"], font=ctk.CTkFont(size=11, weight="bold"), anchor="w", width=200)
-                lbl_t.pack(side="left", padx=4)
+                # Col 0: Artwork Cover Box (64px fixed)
+                art_box = ctk.CTkFrame(row, width=44, height=40, corner_radius=6, fg_color="#374151")
+                art_box.grid(row=0, column=0, sticky="w", padx=(6, 4), pady=6)
+                art_box.grid_propagate(False)
 
-                lbl_a = ctk.CTkLabel(row, text=s["artist"], font=ctk.CTkFont(size=10), text_color="#A1A1AA", anchor="w", width=140)
-                lbl_a.pack(side="left", padx=4)
+                icon_txt = "▶" if is_currently_playing else ("✔" if is_selected else "🎵")
+                lbl_art_icon = ctk.CTkLabel(art_box, text=icon_txt, font=ctk.CTkFont(size=12, weight="bold"), text_color="#10B981" if (is_currently_playing or is_selected) else "#A1A1AA")
+                lbl_art_icon.place(relx=0.5, rely=0.5, anchor="center")
 
-                lbl_alb = ctk.CTkLabel(row, text=s.get("album", "Local Album"), font=ctk.CTkFont(size=10), text_color="#A1A1AA", anchor="w", width=120)
-                lbl_alb.pack(side="left", padx=4)
+                # Col 1: Title Column (Flexible 38%, Truncated)
+                lbl_t = ctk.CTkLabel(
+                    row,
+                    text=truncate_text(s["title"], 32),
+                    font=ctk.CTkFont(size=11, weight="bold" if (is_currently_playing or is_selected) else "normal"),
+                    text_color="#10B981" if is_currently_playing else ("gray10", "gray90"),
+                    anchor="w"
+                )
+                lbl_t.grid(row=0, column=1, sticky="ew", padx=4, pady=6)
 
-                emoji = MOOD_EMOJIS.get(s["mood"], "")
-                lbl_m = ctk.CTkLabel(row, text=f"{emoji} {s['mood']}", font=ctk.CTkFont(size=10, weight="bold"), text_color="#10B981", width=90)
-                lbl_m.pack(side="left", padx=4)
+                # Col 2: Artist Column (Flexible 27% - Ample Space!, Truncated)
+                lbl_a = ctk.CTkLabel(row, text=truncate_text(s["artist"], 24), font=ctk.CTkFont(size=10), text_color="#A1A1AA", anchor="w")
+                lbl_a.grid(row=0, column=2, sticky="ew", padx=4, pady=6)
 
-                lbl_d = ctk.CTkLabel(row, text=s.get("duration", "03:30"), font=ctk.CTkFont(size=10), text_color="#A1A1AA")
-                lbl_d.pack(side="right", padx=12)
+                # Col 3: Mood Badge Column (Controlled 13%)
+                emoji = MOOD_EMOJIS.get(s["mood"], "🎧")
+                mood_badge = ctk.CTkFrame(row, corner_radius=12, fg_color="#064E3B", height=24)
+                mood_badge.grid(row=0, column=3, sticky="w", padx=4, pady=6)
 
-                # Double click to play
-                row.bind("<Double-1>", lambda e, song_obj=s: self._play_song_object(song_obj))
-                lbl_t.bind("<Double-1>", lambda e, song_obj=s: self._play_song_object(song_obj))
-                row.bind("<Button-1>", lambda e, song_obj=s: self._on_select_row(song_obj["id"]))
-                lbl_t.bind("<Button-1>", lambda e, song_obj=s: self._on_select_row(song_obj["id"]))
+                lbl_m = ctk.CTkLabel(mood_badge, text=f"{emoji} {truncate_text(s['mood'], 10)}", font=ctk.CTkFont(size=9, weight="bold"), text_color="#34D399")
+                lbl_m.pack(padx=8, pady=2)
 
-    def _on_select_row(self, song_id: str):
-        self.selected_song_id = song_id
+                # Col 4: Duration Column (Controlled 8%, Right-aligned)
+                lbl_d = ctk.CTkLabel(row, text=s.get("duration", "03:30"), font=ctk.CTkFont(size=10), text_color="#A1A1AA", anchor="e")
+                lbl_d.grid(row=0, column=4, sticky="ew", padx=4, pady=6)
+
+                # Col 5: Action Menu Button ⋯ (Fixed 50px)
+                btn_act = ctk.CTkButton(
+                    row,
+                    text="⋯",
+                    font=ctk.CTkFont(size=12, weight="bold"),
+                    width=28,
+                    height=24,
+                    fg_color="transparent",
+                    text_color="#A1A1AA",
+                    hover_color="#4B5563",
+                    command=lambda song_obj=s: self._on_row_action_click(song_obj)
+                )
+                btn_act.grid(row=0, column=5, sticky="ew", padx=(4, 6), pady=6)
+
+                # Event Bindings: Single-click selects row, double-click immediately plays track!
+                single_click_handler = lambda e, song_obj=s: self._on_select_row(song_obj)
+                double_click_handler = lambda e, song_obj=s: self._on_select_and_play_row(song_obj)
+                for w in (row, art_box, lbl_art_icon, lbl_t, lbl_a, mood_badge, lbl_m, lbl_d):
+                    w.bind("<Button-1>", single_click_handler)
+                    w.bind("<Double-1>", double_click_handler)
+
+    def _on_select_and_play_row(self, song: Dict[str, Any]):
+        self.selected_song_id = song["id"]
+        self._play_song_object(song)
+
+    def _on_row_action_click(self, song: Dict[str, Any]):
+        self.selected_song_id = song["id"]
+        self._on_assign_mood_tag()
+
+    def _on_select_row(self, song_obj: Dict[str, Any]):
+        self.selected_song_id = song_obj["id"]
+        self._refresh_library_table()
 
     # =========================================================================
     # Audio Playback Engine
     # =========================================================================
 
+    def _print_playback_debug_info(self, event_label: str = "Song Change"):
+        """Prints detailed debug telemetry including seeker position, volume, and playback state."""
+        try:
+            pos_sec = self.audio_player.get_position()
+            dur_sec = self.audio_player.duration_sec
+            vol_pct = int(self.audio_player.volume * 100)
+            song_title = self.current_song.get("title", "None") if self.current_song else "None"
+            song_artist = self.current_song.get("artist", "Unknown") if self.current_song else "Unknown"
+            song_mood = self.current_song.get("mood", "N/A") if self.current_song else "N/A"
+            
+            m_pos, s_pos = divmod(int(max(0, pos_sec)), 60)
+            m_dur, s_dur = divmod(int(max(0, dur_sec)), 60)
+            
+            print("\n" + "=" * 65)
+            print(f"[DEBUG TELEMETRY] Event: {event_label}")
+            print(f"  [SONG]     Current Song     : '{song_title}' by {song_artist} [{song_mood}]")
+            print(f"  [SEEKER]   Seeker Position  : {m_pos:02d}:{s_pos:02d} / {m_dur:02d}:{s_dur:02d} ({pos_sec:.2f}s / {dur_sec:.2f}s)")
+            print(f"  [VOLUME]   Volume Level     : {vol_pct}% ({self.audio_player.volume:.2f})")
+            print(f"  [INDEX]    Playlist Index   : {self.current_song_idx + 1} / {len(self.playlist)}")
+            print(f"  [PLAYLIST] Active Playlist  : {self.active_playlist_mood} (View: {self.active_view})")
+            print(f"  [MOODIFY]  Moodify Status   : {'ON' if self.moodify_on else 'OFF'} (AI State: {self.ai_state})")
+            print(f"  [ENGINE]   Audio Engine     : Playing={self.audio_player.is_playing}, Paused={self.audio_player.is_paused}, Crossfading={self.audio_player.is_crossfading}")
+            print("=" * 65 + "\n")
+        except Exception as e:
+            print(f"[DEBUG TELEMETRY ERROR] {e}")
+
     def _play_song_object(self, song: Dict[str, Any]):
-        fpath = song.get("path")
-        if not fpath or not os.path.exists(fpath):
+        raw_path = song.get("path")
+        fpath = os.path.abspath(raw_path) if raw_path else ""
+        file_exists = os.path.exists(fpath) if fpath else False
+        engine_init = (self.audio_player.use_pygame or (self.audio_player.use_wmp and self.audio_player.wmp is not None) or (sys.platform == "win32"))
+
+        print("[PLAYER] Play requested")
+        print(f"[PLAYER] Song: {song.get('title', 'Unknown')}")
+        print(f"[PLAYER] Path: {fpath}")
+        print(f"[PLAYER] File exists: {file_exists}")
+        print(f"[PLAYER] Audio engine initialized: {engine_init}")
+        print(f"[PLAYER] Volume: {self.audio_player.volume}")
+
+        if not fpath or not file_exists:
+            print("[PLAYER] Error: Audio file not found on disk!")
             messagebox.showerror("File Missing", f"Audio file not found on disk:\n{fpath}")
             return
 
         self.current_song = song
+        self.selected_song_id = song["id"]
         self.next_song_prepared = False
+
+        # Add to recent AI song history to prevent immediate repeats
+        song_id = song.get("id")
+        if song_id:
+            if song_id in self.recent_ai_song_ids:
+                self.recent_ai_song_ids.remove(song_id)
+            self.recent_ai_song_ids.append(song_id)
+            if len(self.recent_ai_song_ids) > 5:
+                self.recent_ai_song_ids.pop(0)
 
         try:
             self.current_song_idx = self.playlist.index(song)
@@ -2258,32 +2596,62 @@ class BGMMasterApp(ctk.CTk):
             self.current_song_idx = -1
 
         try:
+            print("[PLAYER] Loading audio...")
             self.audio_player.load(fpath)
+            print("[PLAYER] Audio loaded")
+            print("[PLAYER] Starting playback...")
             self.audio_player.play()
+            print("[PLAYER] Playback started")
+
             self.btn_play_pause.configure(text="⏸", fg_color="#F59E0B")
-            self.lbl_now_playing.configure(text=f"Now Playing:  {song['title']}  |  {song['artist']}")
+            self.lbl_now_playing.configure(text=f"Now Playing:  {truncate_text(song['title'], 30)}  |  {truncate_text(song['artist'], 20)}")
             self.lbl_mood_badge.configure(text=f"Playlist : {song['mood']}")
+            self._refresh_library_table()
+            self._print_playback_debug_info("Song Played / Changed")
         except Exception as e:
-            messagebox.showerror("Playback Error", f"Failed to play MP3 file:\n{e}")
+            print(f"[PLAYER] Playback exception: {e}")
+            self.audio_player.is_playing = False
+            self.btn_play_pause.configure(text="▶", fg_color="#10B981")
+            messagebox.showerror("Playback Error", f"Failed to play audio file:\n{e}")
 
     def _on_toggle_play_pause(self):
-        if not self.current_song:
-            if self.playlist:
-                self._play_song_object(self.playlist[0])
-            else:
-                messagebox.showinfo("Empty Playlist", "Please import audio files into your library.")
-            return
-
         if self.audio_player.is_playing and not self.audio_player.is_paused:
             self.audio_player.pause()
             self.btn_play_pause.configure(text="▶", fg_color="#10B981")
-        else:
+            self._print_playback_debug_info("Pause Clicked")
+            return
+
+        if self.audio_player.is_paused:
             self.audio_player.play()
             self.btn_play_pause.configure(text="⏸", fg_color="#F59E0B")
+            self._print_playback_debug_info("Resume Clicked")
+            return
+
+        # Playback is currently stopped
+        target_song = None
+        if hasattr(self, "selected_song_id") and self.selected_song_id:
+            target_song = next((s for s in self.library_mgr.songs if s["id"] == self.selected_song_id), None)
+
+        if not target_song and self.current_song:
+            target_song = self.current_song
+
+        if not target_song and self.playlist:
+            target_song = self.playlist[0]
+
+        if target_song:
+            self._play_song_object(target_song)
+        else:
+            messagebox.showinfo("Empty Playlist", "Please import audio files into your library.")
 
     def _on_prev_song(self):
         if not self.playlist:
             return
+        
+        print(f"[DEBUG] Previous Button Clicked | Pre-change Pos: {self.audio_player.get_position():.2f}s | Vol: {self.audio_player.volume:.2f}")
+
+        if self.current_song and self.current_song in self.playlist:
+            self.current_song_idx = self.playlist.index(self.current_song)
+
         if self.current_song_idx > 0:
             self.current_song_idx -= 1
         else:
@@ -2294,7 +2662,13 @@ class BGMMasterApp(ctk.CTk):
     def _on_next_song(self):
         if not self.playlist:
             return
-        if self.current_song_idx < len(self.playlist) - 1:
+
+        print(f"[DEBUG] Next Button Clicked | Pre-change Pos: {self.audio_player.get_position():.2f}s | Vol: {self.audio_player.volume:.2f}")
+
+        if self.current_song and self.current_song in self.playlist:
+            self.current_song_idx = self.playlist.index(self.current_song)
+
+        if self.current_song_idx >= 0 and self.current_song_idx < len(self.playlist) - 1:
             self.current_song_idx += 1
         else:
             self.current_song_idx = 0
@@ -2318,11 +2692,11 @@ class BGMMasterApp(ctk.CTk):
                 pass
 
     # =========================================================================
-    # FUNCTIONAL MOODIFY AI ENGINE (Right Panel Switch Connection)
+    # FUNCTIONAL MOODIFY AI ENGINE (Live Expression Visualization & Camera Loop)
     # =========================================================================
 
     def _on_toggle_moodify(self):
-        """Directly connected callback to the CTkSwitch in the right panel."""
+        """Directly connected callback to the permanent CTkSwitch in the right panel."""
         val = self.switch_moodify_var.get()
         if val == "on" and not self.moodify_on:
             self._start_moodify()
@@ -2392,7 +2766,7 @@ class BGMMasterApp(ctk.CTk):
         if hasattr(self, "cam_canvas"):
             self.cam_canvas.configure(
                 image="",
-                text="Camera OFF\n(Moodify is Disabled)",
+                text="Camera OFF\n(Moodify Disabled)",
                 text_color="#A1A1AA"
             )
         if hasattr(self, "lbl_det_mood"):
@@ -2401,6 +2775,104 @@ class BGMMasterApp(ctk.CTk):
             self.lbl_det_playlist.configure(text="PLAYING FROM: All Music")
         if hasattr(self, "lbl_next_queue_banner"):
             self.lbl_next_queue_banner.configure(text="Next: None", text_color="#A1A1AA")
+
+        # Reset expression bars to 0%
+        for bar in self.expression_bars.values():
+            bar.set(0.0)
+        for lbl in self.expression_labels.values():
+            lbl.configure(text="0%")
+
+    def _on_mock_emotion_click(self, emo_name: str):
+        """Hackathon Demo trigger: Simulates emotion detection output and feeds into Moodify pipeline."""
+        emo_upper = emo_name.upper()
+        confidence = 95.0
+
+        print(f"\n--- [DEMO TRIGGER] Mock Emotion: {emo_name} ---")
+
+        # Update expression bars visually
+        mock_probs = {
+            "HAPPY": 0.05, "SAD": 0.05, "NEUTRAL": 0.05, "SURPRISED": 0.05, "ANGRY": 0.05
+        }
+        if emo_upper in mock_probs:
+            mock_probs[emo_upper] = 0.95
+        elif emo_upper in ("ROMANTIC", "CHILL"):
+            mock_probs["NEUTRAL"] = 0.95
+        elif emo_upper in ("LONELY", "FEAR"):
+            mock_probs["SAD"] = 0.95
+        elif emo_upper in ("EXCITED", "ANGRY"):
+            mock_probs["ANGRY"] = 0.95
+
+        for emo_key, bar in self.expression_bars.items():
+            p_val = mock_probs.get(emo_key, 0.05)
+            bar.set(p_val)
+            if emo_key in self.expression_labels:
+                self.expression_labels[emo_key].configure(text=f"{int(p_val * 100)}%")
+
+        if not self.moodify_on:
+            self.moodify_on = True
+            self.switch_moodify_var.set("on")
+            if hasattr(self, "switch_moodify"):
+                self.switch_moodify.configure(text="MOODIFY [ ON ]")
+
+        mapped = EMOTION_TO_MOOD.get(emo_upper, emo_name.capitalize())
+        self.background_mood_buffer = [mapped] * 10
+
+        self._process_detected_emotion(emo_upper, confidence)
+
+        if not self.audio_player.is_playing:
+            self._recommend_and_start_first_song(self.stable_mood)
+        else:
+            self._prepare_next_song_queue()
+
+    def _process_detected_emotion(self, emo_upper: str, confidence: float):
+        """Unified emotion processing pipeline for both real webcam detection and hackathon mock triggers."""
+        detected_mood = EMOTION_TO_MOOD.get(emo_upper, "Chill")
+        self.ai_confidence = confidence
+
+        print(f"[Emotion] Detected: {emo_upper.lower()} ({confidence/100.0:.2f})")
+        print(f"[Moodify] Mapped mood: {detected_mood}")
+
+        if self.ai_state == "INITIAL_ANALYSIS":
+            self.initial_analysis_moods.append(detected_mood)
+            elapsed = time.time() - self.ai_analysis_start_time
+            rem_sec = max(0, int(self.INITIAL_ANALYSIS_SECONDS - elapsed))
+            if hasattr(self, "lbl_det_mood"):
+                self.lbl_det_mood.configure(text=f"AI Status: Analyzing mood... ({rem_sec}s)", text_color="#F59E0B")
+
+            if elapsed >= self.INITIAL_ANALYSIS_SECONDS:
+                most_common_mood = Counter(self.initial_analysis_moods).most_common(1)
+                final_start_mood = most_common_mood[0][0] if most_common_mood else "Chill"
+                self.stable_mood = final_start_mood
+                self.ai_state = "PLAYING"
+
+                emoji = MOOD_EMOJIS.get(self.stable_mood, "😊")
+                print(f"[Moodify] Initial Stable mood: {self.stable_mood}")
+                if hasattr(self, "lbl_det_mood"):
+                    self.lbl_det_mood.configure(text=f"CURRENT MOOD: {emoji} {self.stable_mood} ({int(self.ai_confidence)}%)", text_color="#10B981")
+                self._recommend_and_start_first_song(self.stable_mood)
+
+        elif self.ai_state == "PLAYING" or self.ai_state == "IDLE":
+            if self.ai_state == "IDLE":
+                self.ai_state = "PLAYING"
+
+            self.background_mood_buffer.append(detected_mood)
+            if len(self.background_mood_buffer) > 50:
+                self.background_mood_buffer.pop(0)
+
+            most_common = Counter(self.background_mood_buffer).most_common(1)
+            if most_common:
+                new_stable = most_common[0][0]
+                if new_stable != self.stable_mood:
+                    self.stable_mood = new_stable
+                    print(f"[Moodify] Stable mood updated to: {self.stable_mood}")
+                    self._prepare_next_song_queue()
+
+            emoji = MOOD_EMOJIS.get(self.stable_mood, "😊")
+            if hasattr(self, "lbl_det_mood"):
+                self.lbl_det_mood.configure(text=f"CURRENT MOOD: {emoji} {self.stable_mood} ({int(self.ai_confidence)}%)", text_color="#10B981")
+
+        if hasattr(self, "lbl_det_playlist"):
+            self.lbl_det_playlist.configure(text=f"PLAYING FROM: {self.stable_mood} Playlist")
 
     def _update_camera_moodify(self):
         if not self.moodify_on or self.cap is None or not self.cap.isOpened():
@@ -2425,93 +2897,88 @@ class BGMMasterApp(ctk.CTk):
 
                 if self.predictor is not None:
                     res = self.predictor.predict_vector(feat_vec)
-                    raw_emo = res.emotion.upper()
-                    detected_mood = EMOTION_TO_MOOD.get(raw_emo, "Chill")
-                    self.ai_confidence = float(res.confidence * 100.0)
 
-                    if self.ai_state == "INITIAL_ANALYSIS":
-                        self.initial_analysis_moods.append(detected_mood)
-                        elapsed = time.time() - self.ai_analysis_start_time
-                        rem_sec = max(0, int(self.INITIAL_ANALYSIS_SECONDS - elapsed))
-                        self.lbl_det_mood.configure(text=f"AI Status: Analyzing mood... ({rem_sec}s)", text_color="#F59E0B")
+                    # Update Live Expression Bars & Labels smoothly using uppercase key matching!
+                    probs = getattr(res, "probabilities", {})
+                    if probs:
+                        probs_upper = {k.upper(): float(v) for k, v in probs.items()}
+                        top_emo = max(probs_upper, key=probs_upper.get)
+                        top_prob = probs_upper[top_emo]
 
-                        if elapsed >= self.INITIAL_ANALYSIS_SECONDS:
-                            most_common_mood = Counter(self.initial_analysis_moods).most_common(1)
-                            final_start_mood = most_common_mood[0][0] if most_common_mood else "Chill"
-                            self.stable_mood = final_start_mood
-                            self.ai_state = "PLAYING"
+                        for emo_key, bar in self.expression_bars.items():
+                            p_val = probs_upper.get(emo_key, 0.05)
+                            bar.set(max(0.02, min(1.0, p_val)))
+                            if emo_key in self.expression_labels:
+                                self.expression_labels[emo_key].configure(text=f"{int(p_val * 100)}%")
 
-                            emoji = MOOD_EMOJIS.get(self.stable_mood, "😊")
-                            self.lbl_det_mood.configure(text=f"CURRENT MOOD: {emoji} {self.stable_mood} ({int(self.ai_confidence)}%)", text_color="#10B981")
-                            self._recommend_and_start_first_song(self.stable_mood)
+                        emo_to_process = top_emo if top_prob >= 0.35 else self.stable_mood.upper()
+                        conf_pct = float(top_prob * 100.0)
+                    else:
+                        emo_to_process = res.emotion.upper()
+                        conf_pct = float(res.confidence * 100.0)
 
-                    elif self.ai_state == "PLAYING":
-                        self.background_mood_buffer.append(detected_mood)
-                        if len(self.background_mood_buffer) > 200:
-                            self.background_mood_buffer.pop(0)
-
-                        most_common = Counter(self.background_mood_buffer).most_common(1)
-                        if most_common:
-                            self.stable_mood = most_common[0][0]
-
-                        emoji = MOOD_EMOJIS.get(self.stable_mood, "😊")
-                        self.lbl_det_mood.configure(text=f"CURRENT MOOD: {emoji} {self.stable_mood} ({int(self.ai_confidence)}%)", text_color="#10B981")
+                    self._process_detected_emotion(emo_to_process, conf_pct)
             else:
                 if self.ai_state == "INITIAL_ANALYSIS":
                     elapsed = time.time() - self.ai_analysis_start_time
                     rem_sec = max(0, int(self.INITIAL_ANALYSIS_SECONDS - elapsed))
-                    self.lbl_det_mood.configure(text=f"AI Status: Position face... ({rem_sec}s)", text_color="#F59E0B")
-
-        self.lbl_det_playlist.configure(text=f"PLAYING FROM: {self.stable_mood} Playlist")
+                    if hasattr(self, "lbl_det_mood"):
+                        self.lbl_det_mood.configure(text=f"AI Status: Position face... ({rem_sec}s)", text_color="#F59E0B")
 
         self._render_camera_preview(frame_bgr)
         self.after(50, self._update_camera_moodify)
 
     def _render_camera_preview(self, frame_bgr: np.ndarray):
+        """Renders live camera frames strictly at compact 240x160 pixels inside the right panel."""
         if not hasattr(self, "cam_canvas"):
             return
-        h, w, _ = frame_bgr.shape
-        cw = self.cam_canvas.winfo_width()
-        ch = self.cam_canvas.winfo_height()
 
-        if cw < 40 or ch < 40:
-            cw, ch = 260, 190
-
-        scale = min(cw / w, ch / h)
-        new_w, new_h = int(w * scale), int(h * scale)
+        new_w, new_h = 240, 160
 
         rgb_frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-        pil_img = Image.fromarray(rgb_frame)
-
-        if new_w > 0 and new_h > 0:
-            pil_img = pil_img.resize((new_w, new_h), Image.Resampling.BILINEAR)
+        pil_img = Image.fromarray(rgb_frame).resize((new_w, new_h), Image.Resampling.BILINEAR)
 
         img_ctk = ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=(new_w, new_h))
         self.cam_canvas.configure(image=img_ctk, text="")
 
     def _recommend_and_start_first_song(self, target_mood: str):
+        """Randomly selects a song from the target mood playlist, excluding recently played songs."""
         if self.active_playlist_mood != target_mood:
             self._select_playlist(target_mood)
 
         matching_songs = self.library_mgr.get_songs_by_mood(target_mood)
         if not matching_songs:
-            matching_songs = self.library_mgr.songs
-
-        if matching_songs:
-            self._play_song_object(matching_songs[0])
-
-    def _prepare_next_song_queue(self):
-        target_mood = self.stable_mood
-        matching_songs = self.library_mgr.get_songs_by_mood(target_mood)
+            matching_songs = self.library_mgr.get_related_mood_songs(target_mood)
         if not matching_songs:
             matching_songs = self.library_mgr.songs
 
         if matching_songs:
-            candidates = [s for s in matching_songs if s.get("id") != (self.current_song.get("id") if self.current_song else None)]
-            chosen = candidates[0] if candidates else matching_songs[0]
+            candidates = [s for s in matching_songs if s.get("id") not in self.recent_ai_song_ids]
+            chosen = random.choice(candidates) if candidates else random.choice(matching_songs)
+            print(f"[Recommendation] Selecting first song for: {target_mood}")
+            print(f"[Recommendation] Selected: {chosen.get('title')}")
+            self._play_song_object(chosen)
+
+    def _prepare_next_song_queue(self):
+        """Randomly queues next track from current stable mood playlist, excluding current and recent tracks."""
+        target_mood = self.stable_mood
+        matching_songs = self.library_mgr.get_songs_by_mood(target_mood)
+        if not matching_songs:
+            matching_songs = self.library_mgr.get_related_mood_songs(target_mood)
+        if not matching_songs:
+            matching_songs = self.library_mgr.songs
+
+        if matching_songs:
+            current_id = self.current_song.get("id") if self.current_song else None
+            candidates = [s for s in matching_songs if s.get("id") != current_id and s.get("id") not in self.recent_ai_song_ids]
+            if not candidates:
+                candidates = [s for s in matching_songs if s.get("id") != current_id]
+
+            chosen = random.choice(candidates) if candidates else random.choice(matching_songs)
             self.next_queued_song = chosen
             self.next_song_prepared = True
-            self.lbl_next_queue_banner.configure(text=f"Next: {chosen['title']}", text_color="#10B981")
+            print(f"[Recommendation] Prepared next song for: {target_mood} -> {chosen.get('title')}")
+            self.lbl_next_queue_banner.configure(text=f"Next: {truncate_text(chosen['title'], 18)}", text_color="#10B981")
 
     def _main_timer_loop(self):
         if self.audio_player.is_playing:
@@ -2537,14 +3004,28 @@ class BGMMasterApp(ctk.CTk):
 
                         next_dur = self.audio_player.start_crossfade(next_path, duration=4.0)
                         self.current_song = next_song
+
+                        # Add to recent AI history
+                        song_id = next_song.get("id")
+                        if song_id:
+                            if song_id in self.recent_ai_song_ids:
+                                self.recent_ai_song_ids.remove(song_id)
+                            self.recent_ai_song_ids.append(song_id)
+                            if len(self.recent_ai_song_ids) > 5:
+                                self.recent_ai_song_ids.pop(0)
+
                         self.audio_player.duration_sec = next_dur
                         self.audio_player.start_time = time.time()
                         self.next_queued_song = None
                         self.next_song_prepared = False
 
-                        self.lbl_now_playing.configure(text=f"Now Playing:  {next_song['title']}  |  {next_song['artist']}")
+                        self.lbl_now_playing.configure(text=f"Now Playing:  {truncate_text(next_song['title'], 30)}  |  {truncate_text(next_song['artist'], 20)}")
                         self.lbl_mood_badge.configure(text=f"Playlist : {next_song['mood']}")
                         self.lbl_next_queue_banner.configure(text="Next: None", text_color="#A1A1AA")
+                        self._refresh_library_table()
+                elif not self.moodify_on:
+                    if rem_sec <= 0.5 and dur_sec > 1.0:
+                        self._on_next_song()
 
             m_pos, s_pos = divmod(int(pos_sec), 60)
             m_dur, s_dur = divmod(int(dur_sec), 60)
@@ -2556,6 +3037,8 @@ class BGMMasterApp(ctk.CTk):
 
     def _on_quit(self):
         self.audio_player.stop()
+        if hasattr(self.audio_player, "wmp") and self.audio_player.wmp:
+            self.audio_player.wmp.close()
         if self.moodify_on:
             self._stop_moodify()
         self.destroy()
