@@ -8,6 +8,8 @@ Built by **CtrlFreaks** for the **Useless Hackathon**.
 
 ---
 
+Download the BGM_MASTER Demo.mp4 file to see the video demo
+
 ## 🎯 Basic Details
 
 ### Team Name
@@ -557,6 +559,11 @@ Recommended structure:
 ### Mood Playlists
 
 <img width="960" height="600" alt="Screenshot 2026-09-04 101710" src="https://github.com/user-attachments/assets/a8870903-122a-431f-8b4a-801317de80cd" />
+
+
+##DEMO VIDEO
+
+
 
 
 
