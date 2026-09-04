@@ -538,53 +538,27 @@ Music plays
 
 # 📸 Screenshots
 
-Add project screenshots here.
-
 Recommended structure:
 
 ### Home
+<img width="960" height="600" alt="Screenshot 2026-09-04 101621" src="https://github.com/user-attachments/assets/1857b7e5-ecab-486b-93bf-de8c5ed22972" />
 
-```text
-screenshots/home.png
-```
 
 ### Music Library
 
-```text
-screenshots/music-library.png
-```
+<img width="960" height="600" alt="Screenshot 2026-09-04 101630" src="https://github.com/user-attachments/assets/4a8acc86-eb94-483a-b1e6-943154e030ab" />
+
 
 ### Moodify AI
 
-```text
-screenshots/moodify.png
-```
+<img width="960" height="600" alt="Screenshot 2026-09-04 101649" src="https://github.com/user-attachments/assets/e3833e66-e509-4359-ba4f-eec74259b044" />
+
 
 ### Mood Playlists
 
-```text
-screenshots/mood-playlists.png
-```
+<img width="960" height="600" alt="Screenshot 2026-09-04 101710" src="https://github.com/user-attachments/assets/a8870903-122a-431f-8b4a-801317de80cd" />
 
-### Profile Registration
 
-```text
-screenshots/profile-registration.png
-```
-
-### Now Playing
-
-```text
-screenshots/now-playing.png
-```
-
-After adding the actual images to the repository, replace these code blocks with Markdown image links such as:
-
-```markdown
-![Home](screenshots/home.png)
-```
-
----
 
 # 🌱 Future Scope
 
