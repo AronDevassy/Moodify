@@ -33,6 +33,7 @@ import ctypes
 import random
 import threading
 import subprocess
+import wave
 import warnings
 from collections import Counter
 from typing import Optional, List, Dict, Tuple, Any
@@ -124,6 +125,51 @@ def truncate_text(text: str, max_len: int = 28) -> str:
     if len(text) <= max_len:
         return text
     return text[: max_len - 3] + "..."
+
+
+def get_audio_duration(file_path: str) -> float:
+    """Calculates exact duration in seconds for .wav, .mp3, .m4a, .flac, .ogg audio files."""
+    if not file_path or not os.path.exists(file_path):
+        return 0.0
+
+    ext = os.path.splitext(file_path)[1].lower()
+
+    if ext == ".wav":
+        try:
+            with wave.open(file_path, "rb") as wf:
+                frames = wf.getnframes()
+                rate = wf.getframerate()
+                if rate > 0:
+                    return float(frames) / float(rate)
+        except Exception:
+            pass
+
+    if sys.platform == "win32":
+        try:
+            norm = os.path.normpath(os.path.abspath(file_path))
+            buf = ctypes.create_unicode_buffer(512)
+            ctypes.windll.kernel32.GetShortPathNameW(norm, buf, 512)
+            short_path = buf.value if buf.value else norm
+
+            alias = f"dur_{uuid.uuid4().hex[:8]}"
+            device_type = "waveaudio" if ext == ".wav" else "mpegvideo"
+            err = ctypes.windll.winmm.mciSendStringW(f'open "{short_path}" type {device_type} alias {alias}', None, 0, 0)
+            if err != 0 and device_type == "mpegvideo":
+                err = ctypes.windll.winmm.mciSendStringW(f'open "{short_path}" alias {alias}', None, 0, 0)
+
+            if err == 0:
+                buf_len = ctypes.create_unicode_buffer(512)
+                ctypes.windll.winmm.mciSendStringW(f'status {alias} length', buf_len, 511, 0)
+                ctypes.windll.winmm.mciSendStringW(f'close {alias}', None, 0, 0)
+                val = buf_len.value.strip()
+                if val.isdigit():
+                    dur = float(val) / 1000.0
+                    if dur > 0:
+                        return dur
+        except Exception:
+            pass
+
+    return 0.0
 
 
 def configure_music_table_columns(grid_container: ctk.CTkFrame):
@@ -343,32 +389,30 @@ class AudioPlayer:
         self.is_paused = False
         self.pause_offset = 0.0
 
+        dur = get_audio_duration(self.current_file)
+        self.duration_sec = dur if dur > 0 else 210.0
+
         if self.use_pygame:
             try:
                 pygame.mixer.music.load(self.current_file)
-                try:
-                    sound = pygame.mixer.Sound(self.current_file)
-                    self.duration_sec = sound.get_length()
-                except Exception:
-                    self.duration_sec = 210.0
                 return
             except Exception as e:
                 print(f"[AudioEngine] PyGame load failed: {e}")
 
         if self.use_net and self.net_engine:
             self.net_engine.load(self.current_file, volume=self.volume)
-            self.duration_sec = 210.0
             return
 
         if sys.platform == "win32":
             self._mci_send(f'close {self.active_alias}')
             short_path = self._get_mci_short_path(self.current_file)
             self._mci_send(f'open "{short_path}" type mpegvideo alias {self.active_alias}')
-            len_str = self._mci_send(f'status {self.active_alias} length')
-            try:
-                self.duration_sec = float(len_str) / 1000.0 if len_str else 210.0
-            except ValueError:
-                self.duration_sec = 210.0
+            if dur <= 0:
+                len_str = self._mci_send(f'status {self.active_alias} length')
+                try:
+                    self.duration_sec = float(len_str) / 1000.0 if len_str else 210.0
+                except ValueError:
+                    self.duration_sec = 210.0
 
     def play(self):
         if not self.current_file or not os.path.exists(self.current_file):
@@ -819,12 +863,19 @@ class MusicLibraryManager:
             parts = title.split(" - ", 1)
             artist, title = parts[0].strip(), parts[1].strip()
 
+        dur_sec = get_audio_duration(file_path)
+        if dur_sec > 0:
+            m_units, s_units = divmod(int(dur_sec), 60)
+            dur_str = f"{m_units:02d}:{s_units:02d}"
+        else:
+            dur_str = "03:30"
+
         song = {
             "id": f"song_{uuid.uuid4().hex[:6]}",
             "title": title,
             "artist": artist,
             "album": album,
-            "duration": "03:30",
+            "duration": dur_str,
             "mood": mood,
             "path": file_path
         }
@@ -2489,6 +2540,17 @@ class BGMMasterApp(ctk.CTk):
             if not search_query or search_query in t_title or search_query in t_artist or search_query in t_album or search_query in t_mood:
                 self.playlist.append(s)
 
+                # Ensure true duration is computed and cached
+                dur_val = s.get("duration")
+                if not dur_val or dur_val == "03:30" or dur_val == "00:00":
+                    raw_p = s.get("path")
+                    if raw_p and os.path.exists(raw_p):
+                        d_sec = get_audio_duration(raw_p)
+                        if d_sec > 0:
+                            m_units, s_units = divmod(int(d_sec), 60)
+                            s["duration"] = f"{m_units:02d}:{s_units:02d}"
+                            s["duration_sec"] = d_sec
+
                 is_selected = (hasattr(self, "selected_song_id") and self.selected_song_id == s["id"])
                 is_currently_playing = (self.current_song and self.current_song.get("id") == s["id"])
 
@@ -2500,6 +2562,7 @@ class BGMMasterApp(ctk.CTk):
                     row_fg = "transparent"
 
                 row = ctk.CTkFrame(self.scroll_music_table, corner_radius=6, height=52, fg_color=row_fg)
+                row.song_id = s["id"]
                 row.pack(fill="x", pady=2, padx=4)
                 row.grid_propagate(False)
 
@@ -2538,7 +2601,7 @@ class BGMMasterApp(ctk.CTk):
                 lbl_m.pack(padx=8, pady=2)
 
                 # Col 4: Duration Column (Controlled 8%, Right-aligned)
-                lbl_d = ctk.CTkLabel(row, text=s.get("duration", "03:30"), font=ctk.CTkFont(size=10), text_color="#A1A1AA", anchor="e")
+                lbl_d = ctk.CTkLabel(row, text=s.get("duration", "00:00"), font=ctk.CTkFont(size=10), text_color="#A1A1AA", anchor="e")
                 lbl_d.grid(row=0, column=4, sticky="ew", padx=4, pady=6)
 
                 # Col 5: Action Menu Button ⋯ (Fixed 50px)
@@ -2555,12 +2618,35 @@ class BGMMasterApp(ctk.CTk):
                 )
                 btn_act.grid(row=0, column=5, sticky="ew", padx=(4, 6), pady=6)
 
-                # Event Bindings: Single-click selects row, double-click immediately plays track!
+                # Event Bindings: Single-click highlights, double-tap / double-click immediately plays track!
                 single_click_handler = lambda e, song_obj=s: self._on_select_row(song_obj)
                 double_click_handler = lambda e, song_obj=s: self._on_select_and_play_row(song_obj)
                 for w in (row, art_box, lbl_art_icon, lbl_t, lbl_a, mood_badge, lbl_m, lbl_d):
                     w.bind("<Button-1>", single_click_handler)
                     w.bind("<Double-1>", double_click_handler)
+
+    def _update_table_row_styles(self):
+        """Fast, butter-smooth in-place row visual style update without destroying widgets."""
+        if not hasattr(self, "scroll_music_table"):
+            return
+        for row in self.scroll_music_table.winfo_children():
+            song_id = getattr(row, "song_id", None)
+            if not song_id:
+                continue
+            is_selected = (hasattr(self, "selected_song_id") and self.selected_song_id == song_id)
+            is_currently_playing = (self.current_song and self.current_song.get("id") == song_id)
+
+            if is_currently_playing:
+                row_fg = "#1F2937"
+            elif is_selected:
+                row_fg = "#374151"
+            else:
+                row_fg = "transparent"
+
+            try:
+                row.configure(fg_color=row_fg)
+            except Exception:
+                pass
 
     def _on_select_and_play_row(self, song: Dict[str, Any]):
         self.selected_song_id = song["id"]
@@ -2572,7 +2658,7 @@ class BGMMasterApp(ctk.CTk):
 
     def _on_select_row(self, song_obj: Dict[str, Any]):
         self.selected_song_id = song_obj["id"]
-        self._refresh_library_table()
+        self._update_table_row_styles()
 
     # =========================================================================
     # Audio Playback Engine
@@ -2689,36 +2775,50 @@ class BGMMasterApp(ctk.CTk):
             messagebox.showinfo("Empty Playlist", "Please import audio files into your library.")
 
     def _on_prev_song(self):
-        if not self.playlist:
+        active_list = self.playlist if self.playlist else self.library_mgr.songs
+        if not active_list:
             return
         
         print(f"[DEBUG] Previous Button Clicked | Pre-change Pos: {self.audio_player.get_position():.2f}s | Vol: {self.audio_player.volume:.2f}")
 
-        if self.current_song and self.current_song in self.playlist:
-            self.current_song_idx = self.playlist.index(self.current_song)
+        curr_id = self.current_song.get("id") if self.current_song else None
+        curr_idx = -1
+        if curr_id:
+            for idx, s in enumerate(active_list):
+                if s.get("id") == curr_id:
+                    curr_idx = idx
+                    break
 
-        if self.current_song_idx > 0:
-            self.current_song_idx -= 1
+        if curr_idx > 0:
+            next_idx = curr_idx - 1
         else:
-            self.current_song_idx = len(self.playlist) - 1
+            next_idx = len(active_list) - 1
 
-        self._play_song_object(self.playlist[self.current_song_idx])
+        self.current_song_idx = next_idx
+        self._play_song_object(active_list[next_idx])
 
     def _on_next_song(self):
-        if not self.playlist:
+        active_list = self.playlist if self.playlist else self.library_mgr.songs
+        if not active_list:
             return
 
         print(f"[DEBUG] Next Button Clicked | Pre-change Pos: {self.audio_player.get_position():.2f}s | Vol: {self.audio_player.volume:.2f}")
 
-        if self.current_song and self.current_song in self.playlist:
-            self.current_song_idx = self.playlist.index(self.current_song)
+        curr_id = self.current_song.get("id") if self.current_song else None
+        curr_idx = -1
+        if curr_id:
+            for idx, s in enumerate(active_list):
+                if s.get("id") == curr_id:
+                    curr_idx = idx
+                    break
 
-        if self.current_song_idx >= 0 and self.current_song_idx < len(self.playlist) - 1:
-            self.current_song_idx += 1
+        if curr_idx >= 0 and curr_idx < len(active_list) - 1:
+            next_idx = curr_idx + 1
         else:
-            self.current_song_idx = 0
+            next_idx = 0
 
-        self._play_song_object(self.playlist[self.current_song_idx])
+        self.current_song_idx = next_idx
+        self._play_song_object(active_list[next_idx])
 
     def _on_volume_change(self, value):
         try:
